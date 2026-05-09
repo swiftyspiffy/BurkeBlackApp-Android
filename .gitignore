@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+key.jks
+*.jks
+app/release/
+app/google-services.json
+upload-keystore.jks
+upload_certificate.pem

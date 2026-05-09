@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Skull icon placeholder - replace with actual icon -->
+    <path
+        android:fillColor="#CC8803"
+        android:pathData="M54,28C42.95,28 34,36.95 34,48C34,53.55 36.25,58.55 39.9,62.2L39.9,72C39.9,73.1 40.8,74 41.9,74L49,74L49,68L53,68L53,74L55,74L55,68L59,68L59,74L66.1,74C67.2,74 68.1,73.1 68.1,72L68.1,62.2C71.75,58.55 74,53.55 74,48C74,36.95 65.05,28 54,28ZM44,52C42.34,52 41,50.66 41,49C41,47.34 42.34,46 44,46C45.66,46 47,47.34 47,49C47,50.66 45.66,52 44,52ZM64,52C62.34,52 61,50.66 61,49C61,47.34 62.34,46 64,46C65.66,46 67,47.34 67,49C67,50.66 65.66,52 64,52Z" />
+</vector>
