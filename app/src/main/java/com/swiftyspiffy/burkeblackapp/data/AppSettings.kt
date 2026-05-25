@@ -52,6 +52,8 @@ class AppSettings(private val context: Context) {
     private val showCaptainsDispatch = booleanPreferencesKey("settings.debug.showCaptainsDispatch")
     private val pirateThemeEnabled = booleanPreferencesKey("settings.ui.pirateTheme")
     private val pushHasAskedPermission = booleanPreferencesKey("push_has_asked_permission")
+    private val debugOverrideInteractionsDisabled = booleanPreferencesKey("settings.debug.overrideInteractionsDisabled")
+    private val debugUseTestOverlay = booleanPreferencesKey("settings.debug.useTestOverlay")
 
     // --- Flow accessors ---
 
@@ -85,6 +87,8 @@ class AppSettings(private val context: Context) {
     val presentationModeFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[presentationMode] ?: false }
     val showCaptainsDispatchFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[showCaptainsDispatch] ?: false }
     val pushHasAskedPermissionFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[pushHasAskedPermission] ?: false }
+    val debugOverrideInteractionsDisabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[debugOverrideInteractionsDisabled] ?: false }
+    val debugUseTestOverlayFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[debugUseTestOverlay] ?: false }
 
     // --- Setters ---
 
@@ -209,6 +213,24 @@ class AppSettings(private val context: Context) {
     suspend fun setPushHasAskedPermission(asked: Boolean) {
         context.settingsDataStore.edit { it[pushHasAskedPermission] = asked }
         AppLogger.log("Settings: pushHasAskedPermission = $asked")
+    }
+
+    suspend fun setDebugOverrideInteractionsDisabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[debugOverrideInteractionsDisabled] = enabled }
+        AppLogger.log("Settings: debugOverrideInteractionsDisabled = $enabled")
+    }
+
+    suspend fun setDebugUseTestOverlay(enabled: Boolean) {
+        context.settingsDataStore.edit { it[debugUseTestOverlay] = enabled }
+        AppLogger.log("Settings: debugUseTestOverlay = $enabled")
+    }
+
+    suspend fun getDebugUseTestOverlay(): Boolean {
+        return context.settingsDataStore.data.first()[debugUseTestOverlay] ?: false
+    }
+
+    suspend fun getDebugOverrideInteractionsDisabled(): Boolean {
+        return context.settingsDataStore.data.first()[debugOverrideInteractionsDisabled] ?: false
     }
 
     // --- Sync to backend ---

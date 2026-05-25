@@ -79,6 +79,14 @@ import com.swiftyspiffy.burkeblackapp.ui.screens.ScrollsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.StudioScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.SocialsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.SoundbytesScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.StreamInteractionsScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.StreamInteractionsViewModel
+import com.swiftyspiffy.burkeblackapp.ui.screens.OverlayImagesScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.OverlayImagesViewModel
+import com.swiftyspiffy.burkeblackapp.ui.screens.KlipyViewModel
+import com.swiftyspiffy.burkeblackapp.ui.screens.OverlayPositionerScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.PositionerData
+import com.swiftyspiffy.burkeblackapp.ui.screens.SoundbytePick
 import com.swiftyspiffy.burkeblackapp.ui.screens.SoundbytesViewModel
 import com.swiftyspiffy.burkeblackapp.ui.screens.mod.ModPanelScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.mod.ModPanelViewModel
@@ -261,10 +269,16 @@ private fun AppNavHost(
     var selectedServer by remember { mutableStateOf<CommunityServer?>(null) }
     var editingTiding by remember { mutableStateOf<NewsArticle?>(null) }
     val communityServersViewModel = remember(token) { CommunityServersViewModel(token) }
+    var pendingPositionerData by remember { mutableStateOf<PositionerData?>(null) }
 
     // Presentation mode & Captain's Dispatch visibility
     val context = androidx.compose.ui.platform.LocalContext.current
     val appSettings = (context.applicationContext as BurkeBlackApplication).appSettings
+
+    val streamInteractionsVM = remember(token, username) {
+        val t = token
+        if (t != null) StreamInteractionsViewModel(t, username, appSettings) else null
+    }
     val presentationMode by appSettings.presentationModeFlow.collectAsState(initial = false)
     val showCaptainsDispatch by appSettings.showCaptainsDispatchFlow.collectAsState(initial = false)
 
@@ -369,6 +383,9 @@ private fun AppNavHost(
                 } else null,
                 onNavigateToCrewDispatch = if (showCrewDispatchButton) {
                     { token?.let { navController.navigate(Screen.CrewDispatch.route) } }
+                } else null,
+                onNavigateToStreamInteractions = if (token != null) {
+                    { navController.navigate(Screen.StreamInteractions.route) }
                 } else null
             )
         }
@@ -561,6 +578,76 @@ private fun AppNavHost(
                 token = token,
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.StreamInteractions.route) {
+            streamInteractionsVM?.let { vm ->
+                StreamInteractionsScreen(
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToSoundbytes = {
+                        if (token != null) navController.navigate(Screen.SoundbytesSelect.route)
+                    },
+                    onNavigateToOverlayImages = {
+                        navController.navigate(Screen.OverlayImages.route)
+                    }
+                )
+            }
+        }
+
+        composable(Screen.OverlayImages.route) {
+            token?.let { t ->
+                val overlayImagesVM = remember(t) { OverlayImagesViewModel(t) }
+                val klipyVM = remember(t) { KlipyViewModel(t) }
+                OverlayImagesScreen(
+                    overlayImagesVM = overlayImagesVM,
+                    klipyVM = klipyVM,
+                    onBack = { navController.popBackStack() },
+                    onOverlaySelected = { positionerData ->
+                        pendingPositionerData = positionerData
+                        navController.navigate(Screen.OverlayPositioner.route)
+                    }
+                )
+            }
+        }
+
+        composable(Screen.SoundbytesSelect.route) {
+            token?.let { t ->
+                val soundbytesViewModel = remember(t) { SoundbytesViewModel(t) }
+                SoundbytesScreen(
+                    viewModel = soundbytesViewModel,
+                    onBack = { navController.popBackStack() },
+                    onSelect = { soundbyte, announce ->
+                        streamInteractionsVM?.setSoundbytePick(
+                            SoundbytePick(id = soundbyte.id, name = soundbyte.name, announce = announce)
+                        )
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable(Screen.OverlayPositioner.route) {
+            pendingPositionerData?.let { data ->
+                val thumbnailUrl = remember {
+                    val ts = System.currentTimeMillis() / 1000
+                    "https://static-cdn.jtvnw.net/previews-ttv/live_user_burkeblack-640x360.jpg?_=$ts"
+                }
+                OverlayPositionerScreen(
+                    data = data,
+                    streamThumbnailUrl = thumbnailUrl,
+                    onDone = { pick ->
+                        streamInteractionsVM?.setOverlayPick(pick)
+                        pendingPositionerData = null
+                        // Pop back to stream interactions (remove positioner + overlay images)
+                        navController.popBackStack(Screen.StreamInteractions.route, inclusive = false)
+                    },
+                    onBack = {
+                        pendingPositionerData = null
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }

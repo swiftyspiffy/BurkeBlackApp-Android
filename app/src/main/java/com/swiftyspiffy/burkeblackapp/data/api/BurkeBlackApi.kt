@@ -22,7 +22,42 @@ interface BurkeBlackApi {
     suspend fun fetchStreamStatus(): ApiResponse<StreamStatusResponse>
 
     @GET("soundbytes-status")
-    suspend fun fetchSoundbytesStatus(): ApiResponse<JsonObject>
+    suspend fun fetchSoundbytesStatus(): ApiResponse<SoundbytesStatusData>
+
+    @GET("feature-flags")
+    suspend fun fetchFeatureFlags(
+        @Header("Authorization") auth: String = ""
+    ): ApiResponse<FeatureFlagData>
+
+    @GET("overlay-images")
+    suspend fun fetchOverlayImages(
+        @Header("Authorization") auth: String,
+        @Query("filter") filter: String = "all"
+    ): ApiResponse<OverlayImagesData>
+
+    @POST("overlay-trigger")
+    suspend fun triggerOverlay(
+        @Header("Authorization") auth: String,
+        @Body body: OverlayTriggerBody
+    ): ApiResponse<OverlayTriggerData>
+
+    @POST("gifs/key")
+    suspend fun fetchGifDecryptKey(
+        @Header("Authorization") auth: String
+    ): ApiResponse<GifDecryptKeyData>
+
+    @GET("gifs/search")
+    suspend fun searchGifs(
+        @Header("Authorization") auth: String,
+        @Query("q") query: String,
+        @Query("page") page: Int = 1,
+        @Query("per_page") perPage: Int = 20
+    ): ApiResponse<KlipySearchData>
+
+    @GET("gifs/settings")
+    suspend fun fetchGifSettings(
+        @Header("Authorization") auth: String
+    ): ApiResponse<GifSettingsData>
 
     // Auth
     @POST("auth/reviewer")

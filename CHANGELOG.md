@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 1.7
+
+- Stream Interactions hub: send soundbytes and overlay images/GIFs to the stream
+- Overlay image library with category browsing and display mode selection
+- Klipy GIF search with encrypted preview URLs
+- Interactive overlay positioner with stream thumbnail preview
+- Bounce mode animation preview
+- Feature flag system for server-side feature gating
+- Credit cost display for all interaction modes
+- Home screen widgets: Crew Stats, Stream Status (small and medium)
+- GIF playback support via Coil GIF decoder
+- Stream interactions debug toggles in Advanced screen
+- Soundbytes select mode for stream interactions flow
+
 ## Version 1.5.1
 
 - Added Open Source section to About screen with links to iOS and Android repos

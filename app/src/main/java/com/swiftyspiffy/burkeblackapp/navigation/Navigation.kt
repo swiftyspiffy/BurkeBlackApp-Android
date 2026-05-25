@@ -39,6 +39,10 @@ sealed class Screen(val route: String) {
     data object GiveawaySettings : Screen("giveaway_settings")
     data object LateShift : Screen("late_shift")
     data object Appearance : Screen("appearance")
+    data object StreamInteractions : Screen("stream_interactions")
+    data object OverlayImages : Screen("overlay_images")
+    data object OverlayPositioner : Screen("overlay_positioner")
+    data object SoundbytesSelect : Screen("soundbytes_select")
 }
 
 data class BottomNavItem(

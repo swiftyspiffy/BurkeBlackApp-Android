@@ -14,8 +14,8 @@ android {
         applicationId = "com.swiftyspiffy.burkeblackapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.5.1"
+        versionCode = 13
+        versionName = "1.7"
 
         manifestPlaceholders["appAuthRedirectScheme"] = "burkeblackapp"
     }
@@ -71,6 +71,10 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization)
 
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.androidx.media3.exoplayer)
 
     implementation(platform(libs.firebase.bom))

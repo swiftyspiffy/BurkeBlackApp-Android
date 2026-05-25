@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dirty Skull</string>
+    <string name="crew_stats_widget_description">Yer doubloons, soundbytes, follow months &amp; sub months at a glance.</string>
+    <string name="stream_status_widget_description">Is BurkeBlack live? See at a glance.</string>
+    <string name="stream_status_medium_widget_description">Stream title, game, viewers — all at a glance.</string>
 </resources>

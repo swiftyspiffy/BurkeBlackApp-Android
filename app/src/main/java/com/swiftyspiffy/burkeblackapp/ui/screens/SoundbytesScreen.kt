@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -75,8 +76,10 @@ import com.swiftyspiffy.burkeblackapp.ui.theme.PirateTheme
 @Composable
 fun SoundbytesScreen(
     viewModel: SoundbytesViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSelect: ((Soundbyte, Boolean) -> Unit)? = null
 ) {
+    val isSelectMode = onSelect != null
     LaunchedEffect(Unit) { AppLogger.log("Soundbytes: appeared") }
     val soundbytes by viewModel.soundbytes.collectAsState()
     val genres by viewModel.genres.collectAsState()
@@ -90,6 +93,7 @@ fun SoundbytesScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var sendConfirmSoundbyte by remember { mutableStateOf<Soundbyte?>(null) }
+    var selectConfirmSoundbyte by remember { mutableStateOf<Soundbyte?>(null) }
     var showHistory by remember { mutableStateOf(false) }
     var currentlyPlayingId by remember { mutableIntStateOf(-1) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
@@ -259,11 +263,15 @@ fun SoundbytesScreen(
                     SoundbyteRow(
                         soundbyte = soundbyte,
                         isPlaying = currentlyPlayingId == soundbyte.id,
+                        isSelectMode = isSelectMode,
                         onListen = {
                             if (currentlyPlayingId == soundbyte.id) stopPreview()
                             else playPreview(soundbyte)
                         },
-                        onSend = { sendConfirmSoundbyte = soundbyte }
+                        onSend = {
+                            if (isSelectMode) selectConfirmSoundbyte = soundbyte
+                            else sendConfirmSoundbyte = soundbyte
+                        }
                     )
                     HorizontalDivider(
                         color = Color.White.copy(alpha = 0.08f),
@@ -322,6 +330,42 @@ fun SoundbytesScreen(
         )
     }
 
+    // Select confirmation dialog (for select mode)
+    selectConfirmSoundbyte?.let { soundbyte ->
+        AlertDialog(
+            onDismissRequest = { selectConfirmSoundbyte = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Select ${soundbyte.name}?", color = Color.White) },
+            text = {
+                Text(
+                    "Cost: ${soundbyte.creditCost} credit(s). You have $credits.",
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            },
+            confirmButton = {
+                Column {
+                    TextButton(onClick = {
+                        onSelect?.invoke(soundbyte, true)
+                        selectConfirmSoundbyte = null
+                    }) {
+                        Text("Announce in Chat", color = PirateTheme.accentColor)
+                    }
+                    TextButton(onClick = {
+                        onSelect?.invoke(soundbyte, false)
+                        selectConfirmSoundbyte = null
+                    }) {
+                        Text("Send Quietly", color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectConfirmSoundbyte = null }) {
+                    Text("Cancel", color = Color.White.copy(alpha = 0.4f))
+                }
+            }
+        )
+    }
+
     // History bottom sheet
     if (showHistory) {
         val history by viewModel.history.collectAsState()
@@ -364,6 +408,7 @@ fun SoundbytesScreen(
 private fun SoundbyteRow(
     soundbyte: Soundbyte,
     isPlaying: Boolean,
+    isSelectMode: Boolean = false,
     onListen: () -> Unit,
     onSend: () -> Unit
 ) {
@@ -438,9 +483,13 @@ private fun SoundbyteRow(
                     contentColor = PirateTheme.accentColor
                 )
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send soundbyte", modifier = Modifier.size(16.dp))
+                Icon(
+                    if (isSelectMode) Icons.Default.Check else Icons.Default.Send,
+                    contentDescription = if (isSelectMode) "Select soundbyte" else "Send soundbyte",
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Send", fontSize = 13.sp)
+                Text(if (isSelectMode) "Select" else "Send", fontSize = 13.sp)
             }
         }
     }

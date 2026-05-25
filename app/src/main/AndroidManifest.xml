@@ -36,6 +36,42 @@
                 <data android:scheme="burkeblackapp" />
             </intent-filter>
         </activity>
+        <!-- Crew Stats Widget -->
+        <receiver
+            android:name=".widget.CrewStatsWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/crew_stats_widget_info" />
+        </receiver>
+
+        <!-- Stream Status Small Widget -->
+        <receiver
+            android:name=".widget.StreamStatusSmallWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/stream_status_small_widget_info" />
+        </receiver>
+
+        <!-- Stream Status Medium Widget -->
+        <receiver
+            android:name=".widget.StreamStatusMediumWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/stream_status_medium_widget_info" />
+        </receiver>
+
         <!-- FCM messaging service -->
         <service
             android:name=".push.BurkeFirebaseMessagingService"

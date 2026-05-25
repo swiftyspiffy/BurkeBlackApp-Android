@@ -95,6 +95,9 @@ fun AdvancedScreen(
     // Settings flows for notification channels view
     val presentationMode by appSettings.presentationModeFlow.collectAsState(initial = false)
     val showCaptainsDispatch by appSettings.showCaptainsDispatchFlow.collectAsState(initial = false)
+    val debugOverrideInteractionsDisabled by appSettings.debugOverrideInteractionsDisabledFlow.collectAsState(initial = false)
+    val debugUseTestOverlay by appSettings.debugUseTestOverlayFlow.collectAsState(initial = false)
+    val isSwifty = username.equals("swiftyspiffy", ignoreCase = true)
 
     // Notification settings for channel list
     val burkeStreamEnabled by appSettings.burkeStreamEnabledFlow.collectAsState(initial = true)
@@ -408,6 +411,51 @@ fun AdvancedScreen(
                                 onCheckedChange = { scope.launch { appSettings.setShowCaptainsDispatch(it) } },
                                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PirateTheme.accentColor)
                             )
+                        }
+                    }
+                }
+
+                // Stream Interactions Debug (swiftyspiffy only)
+                if (isSwifty) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SectionHeader("Stream Interactions Debug")
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Override Interactions Disabled", color = Color.White, fontSize = 14.sp)
+                                    Text("Bypass client-side disabled check for stream interactions", color = Color.White.copy(alpha = 0.3f), fontSize = 11.sp)
+                                }
+                                Switch(
+                                    checked = debugOverrideInteractionsDisabled,
+                                    onCheckedChange = { scope.launch { appSettings.setDebugOverrideInteractionsDisabled(it) } },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PirateTheme.accentColor)
+                                )
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Use Test Overlay", color = Color.White, fontSize = 14.sp)
+                                    Text("Send overlays to test page instead of production", color = Color.White.copy(alpha = 0.3f), fontSize = 11.sp)
+                                }
+                                Switch(
+                                    checked = debugUseTestOverlay,
+                                    onCheckedChange = { scope.launch { appSettings.setDebugUseTestOverlay(it) } },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PirateTheme.accentColor)
+                                )
+                            }
                         }
                     }
                 }

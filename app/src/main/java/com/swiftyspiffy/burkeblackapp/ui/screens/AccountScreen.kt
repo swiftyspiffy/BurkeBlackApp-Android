@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -90,7 +91,8 @@ fun AccountScreen(
     onNavigateToFeedback: () -> Unit,
     onNavigateToModPanel: () -> Unit = {},
     onNavigateToCaptainsDispatch: (() -> Unit)? = null,
-    onNavigateToCrewDispatch: (() -> Unit)? = null
+    onNavigateToCrewDispatch: (() -> Unit)? = null,
+    onNavigateToStreamInteractions: (() -> Unit)? = null
 ) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -117,7 +119,8 @@ fun AccountScreen(
                 onNavigateToFeedback = onNavigateToFeedback,
                 onNavigateToModPanel = onNavigateToModPanel,
                 onNavigateToCaptainsDispatch = onNavigateToCaptainsDispatch,
-                onNavigateToCrewDispatch = onNavigateToCrewDispatch
+                onNavigateToCrewDispatch = onNavigateToCrewDispatch,
+                onNavigateToStreamInteractions = onNavigateToStreamInteractions
             )
         } else {
             LoggedOutView(viewModel = viewModel)
@@ -352,7 +355,8 @@ private fun LoggedInView(
     onNavigateToFeedback: () -> Unit,
     onNavigateToModPanel: () -> Unit,
     onNavigateToCaptainsDispatch: (() -> Unit)? = null,
-    onNavigateToCrewDispatch: (() -> Unit)? = null
+    onNavigateToCrewDispatch: (() -> Unit)? = null,
+    onNavigateToStreamInteractions: (() -> Unit)? = null
 ) {
     val username by viewModel.username.collectAsState()
     val avatarUrl by viewModel.avatarUrl.collectAsState()
@@ -485,12 +489,21 @@ private fun LoggedInView(
                 onClick = onNavigateToGiveaways,
                 modifier = Modifier.weight(1f)
             )
-            ActionButton(
-                icon = Icons.Default.MusicNote,
-                label = "Soundbytes",
-                onClick = onNavigateToSoundbytes,
-                modifier = Modifier.weight(1f)
-            )
+            if (onNavigateToStreamInteractions != null) {
+                ActionButton(
+                    icon = Icons.Default.EmojiEmotions,
+                    label = "Stream\nInteractions",
+                    onClick = onNavigateToStreamInteractions,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                ActionButton(
+                    icon = Icons.Default.MusicNote,
+                    label = "Soundbytes",
+                    onClick = onNavigateToSoundbytes,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             if (isModerator) {
                 ActionButton(
                     icon = Icons.Default.Shield,
@@ -641,12 +654,12 @@ private fun ActionButton(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier.height(64.dp)
+        modifier = modifier.height(80.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, contentDescription = label, tint = PirateTheme.accentColor, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(label, fontSize = 11.sp, color = Color.White)
+            Text(label, fontSize = 11.sp, color = Color.White, textAlign = TextAlign.Center)
         }
     }
 }

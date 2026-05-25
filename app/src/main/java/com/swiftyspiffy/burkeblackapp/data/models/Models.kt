@@ -55,7 +55,9 @@ data class StreamStatusResponse(
     @SerialName("is_live") val isLive: Boolean,
     val title: String? = null,
     @SerialName("game_name") val gameName: String? = null,
-    @SerialName("viewer_count") val viewerCount: Int? = null
+    @SerialName("viewer_count") val viewerCount: Int? = null,
+    @SerialName("box_art_url") val boxArtUrl: String? = null,
+    @SerialName("started_at") val startedAt: String? = null
 )
 
 // Schedule
@@ -731,4 +733,118 @@ data class FeedbackBody(
     val message: String,
     val images: List<String>? = null,
     val diagnostics: String? = null
+)
+
+// Feature Flags
+@Serializable
+data class FeatureFlagData(
+    val flags: Map<String, Boolean> = emptyMap()
+)
+
+// Overlay Images
+@Serializable
+data class OverlayImagesData(
+    val categories: List<OverlayCategory> = emptyList(),
+    val images: List<OverlayImage> = emptyList()
+)
+
+@Serializable
+data class OverlayCategory(
+    val id: Int,
+    val name: String
+)
+
+@Serializable
+data class OverlayImage(
+    val id: Int,
+    val name: String,
+    @SerialName("category_id") val categoryId: Int,
+    @SerialName("thumbnail_url") val thumbnailUrl: String,
+    @SerialName("allow_all") val allowAll: Boolean? = null,
+    @SerialName("allow_followers") val allowFollowers: Boolean? = null,
+    @SerialName("allow_subs") val allowSubs: Boolean? = null,
+    @SerialName("allow_mods") val allowMods: Boolean? = null,
+    val modes: OverlayImageModes? = null,
+    val credits: OverlayImageCredits? = null
+)
+
+@Serializable
+data class OverlayImageModes(
+    val large: OverlayImageMode? = null,
+    val medium: OverlayImageMode? = null,
+    val small: OverlayImageMode? = null,
+    val bounce: OverlayImageMode? = null
+)
+
+@Serializable
+data class OverlayImageMode(
+    val width: Int,
+    val height: Int,
+    val duration: Double,
+    val count: Int? = null
+)
+
+@Serializable
+data class OverlayImageCredits(
+    val large: Int? = null,
+    val medium: Int? = null,
+    val small: Int? = null,
+    val bounce: Int? = null,
+    @SerialName("bounce_multi") val bounceMulti: Int? = null
+)
+
+// Overlay Trigger
+@Serializable
+data class OverlayTriggerBody(
+    @SerialName("image_id") val imageId: Int? = null,
+    @SerialName("gif_token") val gifToken: String? = null,
+    val mode: String,
+    val duration: Double,
+    val username: String,
+    val source: String = "app_android",
+    @SerialName("x_percent") val xPercent: Double,
+    @SerialName("y_percent") val yPercent: Double,
+    val test: Boolean? = null
+)
+
+@Serializable
+data class OverlayTriggerData(
+    val message: String,
+    @SerialName("credits_remaining") val creditsRemaining: Int
+)
+
+// Klipy GIF
+@Serializable
+data class KlipySearchData(
+    val results: List<KlipyGifResult> = emptyList(),
+    @SerialName("has_next") val hasNext: Boolean = false,
+    val page: Int = 1
+)
+
+@Serializable
+data class KlipyGifResult(
+    val token: String,
+    val title: String,
+    @SerialName("encrypted_gif_url") val encryptedGifUrl: String,
+    @SerialName("encrypted_preview_url") val encryptedPreviewUrl: String,
+    @SerialName("preview_width") val previewWidth: Int,
+    @SerialName("preview_height") val previewHeight: Int
+)
+
+@Serializable
+data class GifDecryptKeyData(
+    @SerialName("gif_decrypt_key") val gifDecryptKey: String,
+    @SerialName("expires_at") val expiresAt: Long
+)
+
+@Serializable
+data class GifSettingsData(
+    val enabled: Boolean = false,
+    val credits: Map<String, Int> = emptyMap()
+)
+
+// Soundbytes Status
+@Serializable
+data class SoundbytesStatusData(
+    val enabled: Boolean = false
 )

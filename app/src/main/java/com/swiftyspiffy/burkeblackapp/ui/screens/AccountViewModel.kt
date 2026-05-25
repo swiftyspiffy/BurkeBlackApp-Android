@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.swiftyspiffy.burkeblackapp.auth.AuthCallbackData
 import com.swiftyspiffy.burkeblackapp.auth.SessionManager
+import com.swiftyspiffy.burkeblackapp.data.FeatureFlagService
 import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
 import com.swiftyspiffy.burkeblackapp.data.models.DashboardData
 import com.swiftyspiffy.burkeblackapp.data.models.FavSoundbyteData
@@ -20,6 +21,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.swiftyspiffy.burkeblackapp.push.PushNotificationManager
+import com.swiftyspiffy.burkeblackapp.widget.CrewStatsWidget
+import com.swiftyspiffy.burkeblackapp.widget.WidgetDataStore
+import androidx.glance.appwidget.updateAll
+import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 class AccountViewModel(application: Application) : AndroidViewModel(application) {
     val sessionManager = SessionManager(application)
@@ -102,12 +109,16 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             sessionManager.isLoggedIn.collect { loggedIn ->
                 if (loggedIn) {
                     refreshDashboard()
-                    // Connect WebSocket if not already connected
                     val token = sessionManager.token.first()
-                    val name = username.value
-                    if (token != null && !GiveawayWebSocketManager.instance.isConnected.value) {
-                        AppLogger.log("WebSocket: auto-connecting on session restore")
-                        GiveawayWebSocketManager.instance.connect(token, name)
+                    if (token != null) {
+                        // Load feature flags
+                        FeatureFlagService.load(token)
+                        // Connect WebSocket if not already connected
+                        val name = username.value
+                        if (!GiveawayWebSocketManager.instance.isConnected.value) {
+                            AppLogger.log("WebSocket: auto-connecting on session restore")
+                            GiveawayWebSocketManager.instance.connect(token, name)
+                        }
                     }
                 }
             }
@@ -127,6 +138,9 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 )
                 sessionManager.clearForceVerify()
                 refreshDashboard()
+
+                // Load feature flags
+                FeatureFlagService.load(data.token)
 
                 // Connect WebSocket
                 AppLogger.log("WebSocket connecting after auth")
@@ -206,6 +220,21 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
         data.avatarUrl?.let {
             viewModelScope.launch { sessionManager.updateAvatarUrl(it) }
         }
+
+        val context = getApplication<Application>()
+        val followMonths = data.followDate?.let {
+            try {
+                val followInstant = Instant.parse(it)
+                val now = Instant.now()
+                ChronoUnit.MONTHS.between(
+                    followInstant.atZone(ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1),
+                    now.atZone(ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1)
+                ).toInt().coerceAtLeast(0)
+            } catch (_: Exception) { 0 }
+        } ?: 0
+        val subMonths = data.latestSub?.cumulativeMonths ?: 0
+        WidgetDataStore.setCrewStats(context, data.doubloons, data.soundbyteCredits, followMonths, subMonths)
+        viewModelScope.launch { CrewStatsWidget().updateAll(context) }
     }
 
     private suspend fun updateUserStatus(status: UserStatus) {
@@ -236,6 +265,9 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 PushNotificationManager.unregisterFromBackend(token, fcmToken)
             }
             GiveawayWebSocketManager.instance.disconnect()
+            FeatureFlagService.clear()
+            WidgetDataStore.clearCrewStats(getApplication())
+            viewModelScope.launch { CrewStatsWidget().updateAll(getApplication()) }
             sessionManager.clearSession()
             // Reset all state
             _doubloons.value = 0
