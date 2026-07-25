@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.7.1
+
+- Improved stream notification delivery priority and channel routing
+- Added reliable background registration for refreshed push tokens
+
 ## Version 1.7
 
 - Stream Interactions hub: send soundbytes and overlay images/GIFs to the stream

@@ -7,6 +7,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.firebase.messaging.FirebaseMessaging
 import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
@@ -26,6 +32,9 @@ object PushNotificationManager {
             NotificationChannel("announcements", "Announcements", NotificationManager.IMPORTANCE_HIGH),
             NotificationChannel("special_events", "Special Events", NotificationManager.IMPORTANCE_HIGH),
             NotificationChannel("tidings", "Channel Tidings", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel("youtube_videos", "YouTube Videos", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel("youtube_shorts", "YouTube Shorts", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel("tiktok_videos", "TikTok Videos", NotificationManager.IMPORTANCE_DEFAULT),
             NotificationChannel("twitter_posts", "X Posts", NotificationManager.IMPORTANCE_DEFAULT),
             NotificationChannel("general", "General", NotificationManager.IMPORTANCE_DEFAULT),
         )
@@ -59,6 +68,7 @@ object PushNotificationManager {
             .putString(KEY_FCM_TOKEN, token)
             .apply()
         AppLogger.log("Push: FCM token saved locally")
+        enqueueTokenRegistration(context, token)
     }
 
     fun getSavedToken(context: Context): String? {
@@ -66,16 +76,23 @@ object PushNotificationManager {
             .getString(KEY_FCM_TOKEN, null)
     }
 
-    suspend fun registerWithBackend(bearerToken: String, fcmToken: String) {
-        try {
+    suspend fun registerWithBackend(bearerToken: String, fcmToken: String): Boolean {
+        return try {
             val body = JsonObject(mapOf(
                 "platform" to JsonPrimitive("android"),
                 "device_token" to JsonPrimitive(fcmToken),
             ))
-            ApiClient.api.registerDeviceToken("Bearer $bearerToken", body)
-            AppLogger.log("Push: device token registered with backend")
+            val response = ApiClient.api.registerDeviceToken("Bearer $bearerToken", body)
+            if (response.success) {
+                AppLogger.log("Push: device token registered with backend")
+                true
+            } else {
+                AppLogger.log("Push: backend registration rejected: ${response.error}")
+                false
+            }
         } catch (e: Exception) {
             AppLogger.log("Push: backend registration failed: ${e.message}")
+            false
         }
     }
 
@@ -98,8 +115,9 @@ object PushNotificationManager {
             .edit()
             .putString(KEY_FCM_TOKEN, fcmToken)
             .apply()
-        registerWithBackend(bearerToken, fcmToken)
-        AppLogger.log("Push: token refresh completed on app resume")
+        if (registerWithBackend(bearerToken, fcmToken)) {
+            AppLogger.log("Push: token refresh completed on app resume")
+        }
     }
 
     suspend fun unregisterFromBackend(bearerToken: String, fcmToken: String) {
@@ -112,5 +130,27 @@ object PushNotificationManager {
         } catch (e: Exception) {
             AppLogger.log("Push: backend unregister failed: ${e.message}")
         }
+    }
+
+    private fun enqueueTokenRegistration(context: Context, fcmToken: String) {
+        val request = OneTimeWorkRequestBuilder<PushTokenRegistrationWorker>()
+            .setInputData(
+                Data.Builder()
+                    .putString(PushTokenRegistrationWorker.KEY_FCM_TOKEN, fcmToken)
+                    .build()
+            )
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            PushTokenRegistrationWorker.WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request,
+        )
+        AppLogger.log("Push: token registration work queued")
     }
 }

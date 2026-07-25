@@ -173,7 +173,7 @@ private fun MainApp(
     val token by accountViewModel.sessionManager.token.collectAsState(initial = null)
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    LifecycleResumeEffect(isLoggedIn) {
+    LifecycleResumeEffect(isLoggedIn, token) {
         if (isLoggedIn) {
             val wsManager = GiveawayWebSocketManager.instance
             if (!wsManager.isConnected.value) {
