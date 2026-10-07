@@ -8,7 +8,6 @@ import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
@@ -37,18 +36,12 @@ object ApiClient {
         chain.proceed(request)
     }
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = if (BuildConfig.DEBUG) {
-            HttpLoggingInterceptor.Level.BODY
-        } else {
-            HttpLoggingInterceptor.Level.NONE
-        }
-    }
-
+    // Body-level HTTP logging exposes session grants and GIF keys even in debug builds.
+    // Keep the existing method/path logger, which excludes headers, query and body.
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(platformHeaderInterceptor)
+        .addInterceptor(SessionCompatibilityInterceptor(BuildConfig.GO_API_AUTH))
         .addInterceptor(appLoggerInterceptor)
-        .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()

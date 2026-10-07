@@ -16,6 +16,8 @@ android {
         targetSdk = 35
         versionCode = 14
         versionName = "1.7.1"
+        // Enable only after the Go start/renew/refresh routes pass private preview.
+        buildConfigField("boolean", "GO_API_AUTH", providers.gradleProperty("goApiAuth").orElse("false").get().toBooleanStrict().toString())
 
         manifestPlaceholders["appAuthRedirectScheme"] = "burkeblackapp"
     }
@@ -47,6 +49,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
