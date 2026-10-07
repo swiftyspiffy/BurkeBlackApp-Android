@@ -21,5 +21,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Compile and test with no production Firebase configuration
         run: |
+          cat > app/google-services.json <<'JSON'
+          {"project_info":{"project_number":"1234567890","project_id":"synthetic-ci","storage_bucket":"synthetic-ci.invalid"},"client":[{"client_info":{"mobilesdk_app_id":"1:1234567890:android:0000000000000000000000","android_client_info":{"package_name":"com.swiftyspiffy.burkeblackapp"}},"api_key":[{"current_key":"synthetic-ci-not-a-real-api-key"}]}],"configuration_version":"1"}
+          JSON
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug -PgoApiAuth=${{ matrix.go-auth }} -x processDebugGoogleServices
+          ./gradlew testDebugUnitTest assembleDebug -PgoApiAuth=${{ matrix.go-auth }}
