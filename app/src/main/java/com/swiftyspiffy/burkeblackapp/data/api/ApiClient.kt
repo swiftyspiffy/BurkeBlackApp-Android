@@ -38,29 +38,10 @@ object ApiClient {
 
     // Body-level HTTP logging exposes session grants and GIF keys even in debug builds.
     // Keep the existing method/path logger, which excludes headers, query and body.
-    private val sessionRenewalInterceptor = Interceptor { chain ->
-        val request = chain.request()
-        val authenticated = !request.header("Authorization").isNullOrEmpty()
-        if (BuildConfig.GO_API_AUTH && authenticated && request.url.host == "api.burkeblack.tv" && request.url.encodedPath != "/app/auth/renew") {
-            val renewal = request.newBuilder()
-                .url(request.url.newBuilder().encodedPath("/app/auth/renew").query(null).build())
-                .post(okhttp3.RequestBody.create(null, ByteArray(0)))
-                .removeHeader("Content-Type").build()
-            val result = chain.proceed(renewal)
-            if (!result.isSuccessful) return@Interceptor result
-            result.close()
-        }
-        // Older release builds retain GET refresh until exact-method routing is ready.
-        val adapted = if (BuildConfig.GO_API_AUTH && request.url.encodedPath == "/app/twitch-token") {
-            request.newBuilder().post(okhttp3.RequestBody.create(null, ByteArray(0))).build()
-        } else request
-        chain.proceed(adapted)
-    }
-
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(platformHeaderInterceptor)
+        .addInterceptor(SessionCompatibilityInterceptor(BuildConfig.GO_API_AUTH))
         .addInterceptor(appLoggerInterceptor)
-        .addInterceptor(sessionRenewalInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
