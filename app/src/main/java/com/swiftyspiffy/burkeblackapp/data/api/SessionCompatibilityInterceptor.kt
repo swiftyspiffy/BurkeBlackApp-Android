@@ -7,8 +7,10 @@ import okhttp3.Response
 /** Explicit preview protocol; never fall back after a renewal/authentication failure. */
 internal class SessionCompatibilityInterceptor(private val enabled: Boolean) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val request = chain.request()
-        if (!enabled || request.url.scheme != "https" || request.url.host != "api.burkeblack.tv" || !request.url.encodedPath.startsWith("/app/")) return chain.proceed(request)
+        val original = chain.request()
+        if (!enabled || original.url.scheme != "https" || original.url.host != "api.burkeblack.tv" || original.url.port != 443 || !original.url.encodedPath.startsWith("/app/")) return chain.proceed(original)
+        // Protocol routing only; the server still authenticates every request.
+        val request = original.newBuilder().header("X-Burke-Go-API", "1").build()
         if (!request.header("Authorization").isNullOrEmpty() && request.url.encodedPath != "/app/auth/renew") {
             val renewal = request.newBuilder()
                 .url(request.url.newBuilder().encodedPath("/app/auth/renew").query(null).build())

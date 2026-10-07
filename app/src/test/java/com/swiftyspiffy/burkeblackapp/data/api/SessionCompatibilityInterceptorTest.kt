@@ -24,13 +24,15 @@ class SessionCompatibilityInterceptorTest {
         assertEquals(200,code);assertEquals(2,seen.size)
         assertEquals("/app/auth/renew",seen[0].url.encodedPath);assertNull(seen[0].url.query)
         assertEquals("POST",seen[0].method);assertEquals("POST",seen[1].method)
+        seen.forEach { assertEquals("1", it.header("X-Burke-Go-API")) }
     }
     @Test fun failuresDoNotFallBack() {
         for (status in listOf(401,500,503)) { val (seen,code)=requests(true,"https://api.burkeblack.tv/app/dashboard",status);assertEquals(status,code);assertEquals(1,seen.size) }
     }
     @Test fun releaseAndOtherHostsAreUnchanged() {
-        for ((enabled,url) in listOf(false to "https://api.burkeblack.tv/app/twitch-token",true to "https://api.twitch.tv/helix/users",true to "https://example.test/app/twitch-token")) {
+        for ((enabled,url) in listOf(false to "https://api.burkeblack.tv/app/twitch-token",true to "https://api.twitch.tv/helix/users",true to "https://example.test/app/twitch-token",true to "http://api.burkeblack.tv/app/twitch-token",true to "https://api.burkeblack.tv:444/app/twitch-token")) {
             val (seen,_)=requests(enabled,url);assertEquals(1,seen.size);assertEquals("GET",seen[0].method);assertEquals(url,seen[0].url.toString())
+            assertNull(seen[0].header("X-Burke-Go-API"))
         }
     }
 }
