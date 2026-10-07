@@ -116,10 +116,8 @@ class MainActivity : ComponentActivity() {
 
     private fun routeIncomingUri(uri: android.net.Uri) {
         if (uri.scheme == "burkeblackapp") {
-            // Auth callback URIs have token/username params and no host
-            // Deep link URIs have a host (e.g. burkeblackapp://tidings/42)
-            val hasAuthParams = uri.getQueryParameter("token") != null
-            if (hasAuthParams) {
+            // Route both success and error to the one-use state validator.
+            if (uri.host == "auth") {
                 authUri.value = uri
             } else {
                 deepLinkUri.value = uri
