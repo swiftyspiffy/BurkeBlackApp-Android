@@ -134,6 +134,7 @@ private fun MainApp(
     authUri: androidx.compose.runtime.MutableState<android.net.Uri?>,
     deepLinkUri: androidx.compose.runtime.MutableState<android.net.Uri?>
 ) {
+    val authContext = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
     val uri by authUri
 
@@ -141,7 +142,7 @@ private fun MainApp(
     LaunchedEffect(uri) {
         uri?.let { callbackUri ->
             AppLogger.logSensitive("Auth", "callback received: ${callbackUri.scheme}://${callbackUri.host}")
-            val callbackData = TwitchAuthManager.parseCallbackUri(callbackUri)
+            val callbackData = TwitchAuthManager.parseCallbackUri(authContext, callbackUri)
             if (callbackData != null) {
                 accountViewModel.handleAuthCallback(callbackData)
                 navController.navigate(Screen.Account.route) {
