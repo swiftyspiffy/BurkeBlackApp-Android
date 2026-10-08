@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-auth: ['false', 'true']
+        go-auth: ['default', 'false', 'true']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -20,9 +20,26 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
       - name: Compile and test with no production Firebase configuration
+        env:
+          GO_AUTH: ${{ matrix.go-auth }}
         run: |
           cat > app/google-services.json <<'JSON'
           {"project_info":{"project_number":"1234567890","project_id":"synthetic-ci","storage_bucket":"synthetic-ci.invalid"},"client":[{"client_info":{"mobilesdk_app_id":"1:1234567890:android:0000000000000000000000","android_client_info":{"package_name":"com.swiftyspiffy.burkeblackapp"}},"api_key":[{"current_key":"synthetic-ci-not-a-real-api-key"}]}],"configuration_version":"1"}
           JSON
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug -PgoApiAuth=${{ matrix.go-auth }}
+          args=()
+          if [ "$GO_AUTH" != default ]; then args+=("-PgoApiAuth=$GO_AUTH"); fi
+          ./gradlew testDebugUnitTest assembleRelease "${args[@]}"
+      - name: Verify generated debug and release protocol settings
+        env:
+          GO_AUTH: ${{ matrix.go-auth }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          expected = 'false' if os.environ['GO_AUTH'] == 'false' else 'true'
+          for variant in ('debug', 'release'):
+              path = pathlib.Path('app/build/generated/source/buildConfig') / variant / 'com/swiftyspiffy/burkeblackapp/BuildConfig.java'
+              value = re.search(r'boolean GO_API_AUTH = (true|false);', path.read_text())
+              assert value and value.group(1) == expected, f'{variant} protocol setting mismatch'
+          print('Debug and release protocol settings verified')
+          PY
