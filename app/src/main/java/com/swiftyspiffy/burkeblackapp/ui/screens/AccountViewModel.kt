@@ -266,7 +266,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             if (token != null && fcmToken != null) {
                 viewModelScope.launch { PushNotificationManager.unregisterFromBackend(token, fcmToken) }
             }
-            GiveawayWebSocketManager.instance.disconnect()
+            GiveawayWebSocketManager.instance.disconnect(clearSession = true)
             FeatureFlagService.clear()
             WidgetDataStore.clearCrewStats(getApplication())
             viewModelScope.launch { CrewStatsWidget().updateAll(getApplication()) }

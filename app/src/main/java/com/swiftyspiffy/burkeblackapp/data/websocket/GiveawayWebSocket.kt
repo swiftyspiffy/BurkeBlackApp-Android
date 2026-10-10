@@ -108,7 +108,7 @@ class GiveawayWebSocketManager private constructor() {
         doConnect()
     }
 
-    fun disconnect() {
+    fun disconnect(clearSession: Boolean = false) {
         isIntentionalDisconnect = true
         AppLogger.log("WebSocket disconnecting")
         webSocket?.close(1000, "Going away")
@@ -116,8 +116,10 @@ class GiveawayWebSocketManager private constructor() {
         _isConnected.value = false
         isReconnecting = false
         reconnectJob?.cancel()
-        token = null
-        username = null
+        if (clearSession) {
+            token = null
+            username = null
+        }
         _activeGiveaway.value = null
         _isDismissed.value = false
         _claimError.value = null
