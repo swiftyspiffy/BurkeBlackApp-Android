@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.7.3
+
+- Improved Twitch sign-in and account session handling
+
+## Version 1.7.2
+
+- Updated the app to target Android 16 (API level 36)
+
 ## Version 1.7.1
 
 - Improved stream notification delivery priority and channel routing

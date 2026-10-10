@@ -1,6 +1,7 @@
 package com.swiftyspiffy.burkeblackapp.widget
 
 import android.graphics.Color
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.glance.unit.ColorProvider
 
 object WidgetColors {
@@ -12,11 +13,11 @@ object WidgetColors {
     val red = Color.rgb(0xEF, 0x53, 0x50)
     val liveRed = Color.rgb(0xFF, 0x00, 0x00)
 
-    val goldProvider = ColorProvider(gold)
-    val darkBrownProvider = ColorProvider(darkBrown)
-    val medBrownProvider = ColorProvider(medBrown)
-    val whiteProvider = ColorProvider(white)
-    val mutedProvider = ColorProvider(muted)
-    val redProvider = ColorProvider(red)
-    val liveRedProvider = ColorProvider(liveRed)
+    val goldProvider = ColorProvider(ComposeColor(gold))
+    val darkBrownProvider = ColorProvider(ComposeColor(darkBrown))
+    val medBrownProvider = ColorProvider(ComposeColor(medBrown))
+    val whiteProvider = ColorProvider(ComposeColor(white))
+    val mutedProvider = ColorProvider(ComposeColor(muted))
+    val redProvider = ColorProvider(ComposeColor(red))
+    val liveRedProvider = ColorProvider(ComposeColor(liveRed))
 }

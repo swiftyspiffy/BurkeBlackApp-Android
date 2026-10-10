@@ -8,14 +8,18 @@ plugins {
 
 android {
     namespace = "com.swiftyspiffy.burkeblackapp"
-    compileSdk = 35
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "com.swiftyspiffy.burkeblackapp"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 14
-        versionName = "1.7.1"
+        targetSdk = 36
+        versionCode = 16
+        versionName = "1.7.3"
         // Explicit overrides support compatibility builds; releases use Go.
         buildConfigField("boolean", "GO_API_AUTH", providers.gradleProperty("goApiAuth").orElse("true").get().toBooleanStrict().toString())
 

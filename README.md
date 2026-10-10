@@ -73,9 +73,9 @@ This is the **Android** repository. The iOS app lives at [BurkeBlackApp-iOS](htt
 
 ### Requirements
 
-- Android Studio Hedgehog or later
+- Android Studio Narwhal 3 Feature Drop or later
 - JDK 17+
-- Android SDK 35
+- Android SDK 36.1
 - Min SDK 26 (Android 8.0)
 
 ### Getting Started

@@ -1,8 +1,10 @@
 package com.swiftyspiffy.burkeblackapp.ui.screens
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
 import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -406,8 +408,14 @@ fun FeedbackScreen(
                             val imageStrings = if (selectedImages.isNotEmpty()) {
                                 selectedImages.mapNotNull { uri ->
                                     try {
-                                        val source = ImageDecoder.createSource(context.contentResolver, uri)
-                                        val bitmap = ImageDecoder.decodeBitmap(source)
+                                        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            val source = ImageDecoder.createSource(context.contentResolver, uri)
+                                            ImageDecoder.decodeBitmap(source)
+                                        } else {
+                                            context.contentResolver.openInputStream(uri)?.use {
+                                                BitmapFactory.decodeStream(it)
+                                            }
+                                        } ?: return@mapNotNull null
                                         val stream = ByteArrayOutputStream()
                                         bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream)
                                         Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
