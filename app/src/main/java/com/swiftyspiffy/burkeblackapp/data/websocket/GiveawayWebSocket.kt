@@ -4,6 +4,7 @@ import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,7 @@ class GiveawayWebSocketManager private constructor() {
     private var token: String? = null
     private var username: String? = null
     private var isReconnecting = false
+    private var reconnectJob: Job? = null
     var appSettings: AppSettings? = null
         set(value) {
             field = value
@@ -100,7 +102,7 @@ class GiveawayWebSocketManager private constructor() {
 
     fun reconnectIfNeeded() {
         if (_isConnected.value || isReconnecting) return
-        val t = token ?: return
+        if (token == null) return
         AppLogger.log("WebSocket: reconnecting")
         isIntentionalDisconnect = false
         doConnect()
@@ -112,9 +114,18 @@ class GiveawayWebSocketManager private constructor() {
         webSocket?.close(1000, "Going away")
         webSocket = null
         _isConnected.value = false
+        isReconnecting = false
+        reconnectJob?.cancel()
+        token = null
+        username = null
+        _activeGiveaway.value = null
+        _isDismissed.value = false
+        _claimError.value = null
+        _messageLog.value = emptyList()
     }
 
     private fun doConnect() {
+        reconnectJob?.cancel()
         isReconnecting = true
         // Cancel old socket — use cancel() instead of close() to avoid onClosed callback
         val old = webSocket
@@ -129,16 +140,18 @@ class GiveawayWebSocketManager private constructor() {
         val newSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(ws: WebSocket, response: Response) {
                 scope.launch {
+                    if (ws != webSocket) return@launch
                     isReconnecting = false
                     _isConnected.value = true
                     logMessage("[CONNECTED]")
                     AppLogger.log("WebSocket connected")
                 }
-                scope.launch { checkForActiveGiveaway() }
+                scope.launch { if (ws == webSocket) checkForActiveGiveaway() }
             }
 
             override fun onMessage(ws: WebSocket, text: String) {
                 scope.launch {
+                    if (ws != webSocket) return@launch
                     logMessage(text)
                     handleMessage(text)
                 }
@@ -175,7 +188,8 @@ class GiveawayWebSocketManager private constructor() {
     }
 
     private fun scheduleReconnect() {
-        scope.launch {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
             AppLogger.log("WebSocket reconnecting in 5s")
             delay(5000)
             if (!isIntentionalDisconnect) {
@@ -214,7 +228,7 @@ class GiveawayWebSocketManager private constructor() {
                     scope.launch { fetchActiveGiveawayId() }
                 }
                 "giveawayupdate" -> {
-                    val entries = json.optString("totalEntries", null)
+                    val entries = json.optString("totalEntries", "").ifEmpty { null }
                     _activeGiveaway.value = _activeGiveaway.value?.copy(totalEntries = entries)
                 }
                 "rafflewinner" -> {
@@ -242,7 +256,7 @@ class GiveawayWebSocketManager private constructor() {
                     }
                 }
                 "raffleclaim" -> {
-                    val winner = json.optString("winner", null)
+                    val winner = json.optString("winner", "").ifEmpty { null }
                     AppLogger.log("Giveaway: claimed by $winner")
                     _activeGiveaway.value = _activeGiveaway.value?.copy(
                         phase = GiveawayPhase.CLAIMED,
@@ -263,6 +277,7 @@ class GiveawayWebSocketManager private constructor() {
         val token = this.token ?: return
         try {
             val response = ApiClient.api.fetchActiveGiveaway("Bearer $token")
+            if (this.token != token) return
             val data = response.data ?: return
             val id = data["id"]?.jsonPrimitive?.int ?: return
             val state = data["state"]?.jsonPrimitive?.content ?: ""
@@ -318,6 +333,7 @@ class GiveawayWebSocketManager private constructor() {
         try {
             val body = buildJsonObject { put("giveaway_id", id) }
             ApiClient.api.enterGiveaway("Bearer $token", body)
+            if (this.token != token || _activeGiveaway.value?.id != id) return
             _activeGiveaway.value = _activeGiveaway.value?.copy(isEntered = true)
         } catch (e: Exception) { AppLogger.log("Error: ${e.message}") }
     }
@@ -328,6 +344,7 @@ class GiveawayWebSocketManager private constructor() {
         try {
             val body = buildJsonObject { put("giveaway_id", id) }
             ApiClient.api.leaveGiveaway("Bearer $token", body)
+            if (this.token != token || _activeGiveaway.value?.id != id) return
             _activeGiveaway.value = _activeGiveaway.value?.copy(isEntered = false)
         } catch (e: Exception) { AppLogger.log("Error: ${e.message}") }
     }
@@ -342,6 +359,7 @@ class GiveawayWebSocketManager private constructor() {
         try {
             val body = buildJsonObject { put("giveaway_id", id) }
             val response = ApiClient.api.claimGiveaway("Bearer $token", body)
+            if (this.token != token || _activeGiveaway.value?.id != id) return
             if (response.success) {
                 AppLogger.log("Giveaway: claimed giveaway $id")
                 _activeGiveaway.value = _activeGiveaway.value?.copy(phase = GiveawayPhase.CLAIMED)
@@ -362,6 +380,7 @@ class GiveawayWebSocketManager private constructor() {
         try {
             val body = buildJsonObject { put("giveaway_id", id) }
             val response = ApiClient.api.passGiveaway("Bearer $token", body)
+            if (this.token != token || _activeGiveaway.value?.id != id) return
             if (response.success) {
                 AppLogger.log("Giveaway: passed on giveaway $id")
                 // Bot will redraw — clear giveaway and wait for new rafflewinner event

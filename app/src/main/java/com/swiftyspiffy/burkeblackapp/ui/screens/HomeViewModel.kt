@@ -13,9 +13,6 @@ class HomeViewModel : ViewModel() {
     private val _streamStatus = MutableStateFlow<StreamStatusResponse?>(null)
     val streamStatus: StateFlow<StreamStatusResponse?> = _streamStatus
 
-    private val _profileImageUrl = MutableStateFlow<String?>(null)
-    val profileImageUrl: StateFlow<String?> = _profileImageUrl
-
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -25,7 +22,6 @@ class HomeViewModel : ViewModel() {
     init {
         AppLogger.log("App launched")
         checkStreamStatus()
-        loadProfile()
     }
 
     fun checkStreamStatus(force: Boolean = false) {
@@ -53,16 +49,4 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    private fun loadProfile() {
-        viewModelScope.launch {
-            try {
-                val response = ApiClient.api.fetchProfile()
-                if (response.success && response.data != null) {
-                    _profileImageUrl.value = response.data.avatarURL
-                }
-            } catch (e: Exception) {
-                AppLogger.log("Profile load failed: ${e.message}")
-            }
-        }
-    }
 }

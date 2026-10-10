@@ -188,11 +188,13 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             AppLogger.log("Refreshing dashboard")
             try {
                 val dashResponse = ApiClient.api.fetchDashboard("Bearer $token")
+                if (sessionManager.getToken() != token) return@launch
                 if (dashResponse.success && dashResponse.data != null) {
                     updateDashboard(dashResponse.data)
                 }
 
                 val statusResponse = ApiClient.api.fetchUserStatus("Bearer $token")
+                if (sessionManager.getToken() != token) return@launch
                 if (statusResponse.success && statusResponse.data != null) {
                     updateUserStatus(statusResponse.data)
                 }
@@ -262,7 +264,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             val token = sessionManager.token.first()
             val fcmToken = PushNotificationManager.getFcmToken()
             if (token != null && fcmToken != null) {
-                PushNotificationManager.unregisterFromBackend(token, fcmToken)
+                viewModelScope.launch { PushNotificationManager.unregisterFromBackend(token, fcmToken) }
             }
             GiveawayWebSocketManager.instance.disconnect()
             FeatureFlagService.clear()
@@ -282,6 +284,14 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             _lastSoundbyte.value = null
             _follows.value = false
             _subscribed.value = false
+            _eventsDonations.value = 0.0
+            _soundbyteSends.value = 0
+            _subTier.value = null
+            _userRole.value = ""
+            _isSubGifter.value = false
+            _isBitsSender.value = false
+            _isDonator.value = false
+            _followedAt.value = null
         }
     }
 

@@ -1,5 +1,9 @@
 name: Client auth compatibility
-on: [pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

@@ -59,7 +59,8 @@ class SessionManager(private val context: Context) {
             prefs[TOKEN_KEY] = token
             prefs[USER_ID_KEY] = userId
             prefs[USERNAME_KEY] = username
-            avatarUrl?.let { prefs[AVATAR_URL_KEY] = it }
+            if (avatarUrl == null) prefs.remove(AVATAR_URL_KEY)
+            else prefs[AVATAR_URL_KEY] = avatarUrl
             prefs[IS_MODERATOR_KEY] = isModerator
         }
         AppLogger.log("Session saved for user: $username")

@@ -9,15 +9,6 @@ import retrofit2.http.*
 interface BurkeBlackApi {
 
     // Public endpoints
-    @GET("home")
-    suspend fun fetchHome(): ApiResponse<HomeData>
-
-    @GET("schedule")
-    suspend fun fetchSchedule(): ApiResponse<List<ScheduleItem>>
-
-    @GET("profile")
-    suspend fun fetchProfile(): ApiResponse<ProfileData>
-
     @GET("stream-status")
     suspend fun fetchStreamStatus(): ApiResponse<StreamStatusResponse>
 
