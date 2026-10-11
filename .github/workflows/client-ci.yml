@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, projects-server, build]
     strategy:
       matrix:
         go-auth: ['default', 'false', 'true']
