@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.7.5
+
+- Giveaway controls now show the options supported by the server
+- Corrected giveaway timing and minimum-entry controls where available
+
 ## Version 1.7.3
 
 - Improved Twitch sign-in and account session handling
