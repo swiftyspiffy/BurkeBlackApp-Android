@@ -268,6 +268,9 @@ interface BurkeBlackApi {
     @POST("mod/giveaway-submissions/add")
     suspend fun addGiveaway(@Header("Authorization") auth: String, @Body body: JsonObject): ApiResponse<JsonObject>
 
+    @GET("mod/giveaway-runtime")
+    suspend fun fetchGiveawayRuntime(@Header("Authorization") auth: String): ApiResponse<GiveawayRuntimeOptions>
+
     @POST("mod/giveaway-send")
     suspend fun sendGiveawayToKraken(@Header("Authorization") auth: String, @Body body: JsonObject): ApiResponse<MessageResponse>
 

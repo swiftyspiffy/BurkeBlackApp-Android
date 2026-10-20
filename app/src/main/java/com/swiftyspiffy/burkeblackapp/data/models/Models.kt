@@ -848,3 +848,15 @@ data class GifSettingsData(
 data class SoundbytesStatusData(
     val enabled: Boolean = false
 )
+
+// Optional fields also support a runtime that predates entry-rule controls.
+@Serializable
+data class GiveawayRuntimeOptions(
+    val phase: String,
+    @SerialName("entry_filters") val entryFilters: List<String>? = null,
+    @SerialName("minimum_entries_max") val minimumEntriesMax: Int? = null
+) {
+    val supportedFilters get() = (entryFilters ?: listOf("none", "doubloons"))
+        .filter { it in listOf("none", "doubloons", "subscriber", "non_subscriber", "follower") }
+    val maximumEntries get() = (minimumEntriesMax ?: 1).coerceIn(1, 5000)
+}

@@ -768,7 +768,31 @@ private fun SendToKrakenFormScreen(
     var claimDuration by remember { mutableStateOf("120") }
 
     val typeOptions = listOf("code", "steam_trade", "steam_code", "steam_gift", "discord", "epicgames_code", "humblebundle", "logitech", "origin", "gog", "uplay", "soundbyte", "other")
-    val filterOptions = listOf("none", "subscriber", "follower")
+    var minimumEntries by remember { mutableStateOf("1") }
+    var runtime by remember { mutableStateOf<com.swiftyspiffy.burkeblackapp.data.models.GiveawayRuntimeOptions?>(null) }
+    var optionsLoaded by remember { mutableStateOf(false) }
+    var optionsError by remember { mutableStateOf(false) }
+    var optionsAttempt by remember { mutableStateOf(0) }
+    LaunchedEffect(submission.id, optionsAttempt) {
+        optionsLoaded = false
+        optionsError = false
+        try {
+            runtime = vm.giveawayRuntimeOptions()
+            optionsLoaded = true
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            optionsError = true
+        }
+    }
+    val filterOptions = runtime?.supportedFilters ?: listOf("none", "doubloons")
+    val maximumEntries = runtime?.maximumEntries ?: 1
+    fun filterLabel(value: String) = when (value) {
+        "subscriber" -> "Current subscribers"
+        "non_subscriber" -> "Non-subscribers"
+        "follower" -> "Followers"
+        else -> value.replaceFirstChar { it.uppercaseChar() }
+    }
 
     Scaffold(
         topBar = { ModTopBar("Send to Kraken", onBack) },
@@ -782,6 +806,10 @@ private fun SendToKrakenFormScreen(
                 .padding(16.dp)
         ) {
             // Giveaway Details section
+            if (optionsError) {
+                Text("Could not load giveaway options. Try again before sending.")
+                TextButton(onClick = { optionsAttempt += 1 }) { Text("Retry") }
+            }
             SectionLabel("Giveaway Details")
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -844,7 +872,7 @@ private fun SendToKrakenFormScreen(
                     Text("Filter", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
                     ExposedDropdownMenuBox(expanded = filterExpanded, onExpandedChange = { filterExpanded = it }) {
                         OutlinedTextField(
-                            value = filter,
+                            value = filterLabel(filter),
                             onValueChange = {},
                             readOnly = true,
                             modifier = Modifier.fillMaxWidth(),
@@ -856,14 +884,20 @@ private fun SendToKrakenFormScreen(
                         ExposedDropdownMenu(expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
                             filterOptions.forEach { option ->
                                 DropdownMenuItem(
-                                    text = { Text(option) },
+                                    text = { Text(filterLabel(option)) },
                                     onClick = { filter = option; filterExpanded = false }
                                 )
                             }
                         }
                     }
-                    if (filter != "none") {
-                        FormField("Filter amount", filterAmount) { filterAmount = it }
+                    if (filter == "doubloons") {
+                        FormField("Doubloons required", filterAmount) { filterAmount = it }
+                    } else if (filter != "none") {
+                        Text("Current status is checked when viewers enter.", fontSize = 12.sp)
+                    }
+                    if (maximumEntries > 1) {
+                        FormField("Minimum entries (1–$maximumEntries)", minimumEntries) { minimumEntries = it }
+                        Text("The giveaway closes without a winner if the first draw has too few entries.", fontSize = 12.sp)
                     }
                 }
             }
@@ -888,8 +922,6 @@ private fun SendToKrakenFormScreen(
             // Send button
             Button(
                 onClick = {
-                    val entryMinutes = ((entryDuration.toIntOrNull() ?: 300) / 60).toString()
-                    val claimMinutes = ((claimDuration.toIntOrNull() ?: 120) / 60).toString()
                     vm.sendToKraken(
                         submissionId = submission.id,
                         name = name,
@@ -898,12 +930,19 @@ private fun SendToKrakenFormScreen(
                         prize = keyCode,
                         filter = filter,
                         filterAmount = filterAmount,
-                        entryDuration = entryMinutes,
-                        claimDuration = claimMinutes
+                        entryDuration = entryDuration,
+                        claimDuration = claimDuration,
+                        minimumEntries = minimumEntries,
+                        runtime = runtime
                     )
                     onBack()
                 },
-                enabled = name.isNotBlank() && keyCode.isNotBlank(),
+                enabled = optionsLoaded && name.isNotBlank() && keyCode.isNotBlank() &&
+                    (entryDuration.toIntOrNull() ?: 0) in 120..86400 &&
+                    (entryDuration.toIntOrNull() ?: 0) % 60 == 0 &&
+                    (claimDuration.toIntOrNull() ?: 0) in 60..86400 &&
+                    (claimDuration.toIntOrNull() ?: 0) % 60 == 0 &&
+                    (minimumEntries.toIntOrNull() ?: 0) in 1..maximumEntries,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().height(48.dp)

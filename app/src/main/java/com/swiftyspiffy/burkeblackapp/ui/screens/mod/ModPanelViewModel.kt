@@ -3,6 +3,7 @@ package com.swiftyspiffy.burkeblackapp.ui.screens.mod
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
+import com.swiftyspiffy.burkeblackapp.data.api.giveawayEntryFields
 import com.swiftyspiffy.burkeblackapp.data.models.*
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -485,16 +486,25 @@ class ModPanelViewModel(val token: String) : ViewModel() {
         }
     }
 
+    suspend fun giveawayRuntimeOptions(): GiveawayRuntimeOptions? = try {
+        val response = ApiClient.api.fetchGiveawayRuntime(auth)
+        check(response.success && response.data != null) { "Giveaway options unavailable" }
+        response.data
+    } catch (error: retrofit2.HttpException) {
+        if (error.code() == 404) null else throw error
+    }
+
     fun sendToKraken(submissionId: Int, name: String, donator: String, type: String, prize: String,
-                     filter: String, filterAmount: String, entryDuration: String, claimDuration: String) {
+                     filter: String, filterAmount: String, entryDuration: String, claimDuration: String,
+                     minimumEntries: String, runtime: GiveawayRuntimeOptions?) {
         viewModelScope.launch {
             AppLogger.log("Mod: send giveaway to kraken '$name'")
             try {
+                val fields = giveawayEntryFields(filter, filterAmount, entryDuration, claimDuration, minimumEntries, runtime)
                 val body = buildJsonObject {
                     put("submission_id", "$submissionId"); put("name", name); put("donator", donator)
-                    put("type", type); put("prize", prize); put("filter", filter)
-                    put("filter_amount", filterAmount); put("entry_duration", entryDuration)
-                    put("claim_duration", claimDuration)
+                    put("type", type); put("prize", prize)
+                    fields.forEach { (key, value) -> put(key, value) }
                 }
                 val resp = ApiClient.api.sendGiveawayToKraken(auth, body)
                 if (resp.success) { _message.value = resp.data?.message ?: "Sent to Kraken"; loadSubmissions() }
