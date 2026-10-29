@@ -18,8 +18,8 @@ android {
         applicationId = "com.swiftyspiffy.burkeblackapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.7.5"
+        versionCode = 19
+        versionName = "1.8.0"
         // Explicit overrides support compatibility builds; releases use Go.
         buildConfigField("boolean", "GO_API_AUTH", providers.gradleProperty("goApiAuth").orElse("true").get().toBooleanStrict().toString())
 

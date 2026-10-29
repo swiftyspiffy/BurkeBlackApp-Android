@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Version 1.8.0
 
 - Redesigned Helm, Crew, Tidings, Ports, and Rigging to match the iOS app
 - Added textured pirate cards, decorative headers, gold accents, and responsive layouts
