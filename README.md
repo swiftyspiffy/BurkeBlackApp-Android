@@ -53,7 +53,7 @@ Whether you're a long-time crew member or a new viewer, the app gives you everyt
 - **Soundbytes** - browse, preview, and send soundbytes to the stream. Filter by genre, search by name, and track your credits and send history.
 - **Captain's Quarters** - your personal dashboard with doubloons, donations, bits cheered, subscription details, giveaway history, and achievement badges.
 - **Tidings** - stay up to date with community news and announcements straight from the Captain and his officers.
-- **Captains** - choose who leads the crew with voting tokens, character profiles, and election/all-time rankings. New elections appear once as a minimizable popup; browse publicly and sign in with Twitch to vote.
+- **Captains** - choose who leads the crew with voting tokens, character profiles, and election/all-time rankings. New elections open the full Captains page once. Minimize it to a draggable pirate captain circle; its position and your selected section are remembered. Browse publicly and sign in with Twitch to vote.
 - **The Crew** - vote on monthly Twitch clips, browse community game servers, explore emotes and badges, and check The Late Shift team status.
 - **Ports** - latest YouTube videos, Shorts, TikToks, and X posts all in one feed.
 - **Mod Panel** - moderators get a full toolkit: quick actions, viewer lookup, chat commands, timed messages, giveaway and soundbyte management, and more.

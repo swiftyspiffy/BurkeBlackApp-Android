@@ -10,6 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
@@ -19,12 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.swiftyspiffy.burkeblackapp.auth.SessionIdentity
+import com.swiftyspiffy.burkeblackapp.data.CaptainBubblePosition
 import com.swiftyspiffy.burkeblackapp.data.EventPopup
 import com.swiftyspiffy.burkeblackapp.data.EventPopupCoordinator
 import com.swiftyspiffy.burkeblackapp.data.captains.*
 import com.swiftyspiffy.burkeblackapp.data.models.*
 import com.swiftyspiffy.burkeblackapp.data.websocket.GiveawayWebSocketManager
-import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.EventPopupsOverlay
 import com.swiftyspiffy.burkeblackapp.ui.screens.LocalCaptainsTime
 import com.swiftyspiffy.burkeblackapp.ui.theme.LocalPirateTheme
@@ -33,6 +34,7 @@ import java.io.File
 import java.io.IOException
 import java.time.Instant
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import org.junit.After
 import org.junit.Assert.*
@@ -50,11 +52,11 @@ class CaptainsUiTest {
     private val popups = EventPopupCoordinator.instance
     private lateinit var repository: CaptainsRepository
     private val source = Source()
-    private val fullScreenState = mutableStateOf(true)
     private val pirateState = mutableStateOf(true)
     private val fontState = mutableFloatStateOf(1f)
     private val tabletState = mutableStateOf(false)
     private val signedInState = mutableStateOf(false)
+    private var previousBubblePosition: CaptainBubblePosition? = null
 
     private class Store : CaptainsStore {
         var shown: String? = null
@@ -154,13 +156,15 @@ class CaptainsUiTest {
         }
     }
 
-    private fun launch(
-        signedIn: Boolean = true,
-        fullScreen: Boolean = true,
-        pirate: Boolean = true,
-        fontScale: Float = 1f,
-    ) {
-        fullScreenState.value = fullScreen
+    private fun launch(signedIn: Boolean = true, pirate: Boolean = true, fontScale: Float = 1f) {
+        val settings =
+            (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+                    as BurkeBlackApplication)
+                .appSettings
+        runBlocking {
+            previousBubblePosition = settings.captainBubblePositionFlow.first()
+            settings.setCaptainBubblePosition(CaptainBubblePosition())
+        }
         pirateState.value = pirate
         fontState.floatValue = fontScale
         signedInState.value = signedIn
@@ -214,22 +218,14 @@ class CaptainsUiTest {
                     Box(
                         Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)
                     ) {
-                        if (fullScreenState.value)
-                            CaptainsScreen(repository, onBack = {}, onSignIn = {})
-                        else Text("The Helm", modifier = Modifier.padding(16.dp))
-                        EventPopupsOverlay(
-                            repository,
-                            signedInState.value,
-                            onOpenCaptains = {},
-                            onSignIn = {},
-                        )
+                        Text("The Helm", modifier = Modifier.padding(16.dp))
+                        EventPopupsOverlay(repository, signedInState.value, onSignIn = {})
                     }
                 }
             }
         }
         compose.waitUntil(30_000) {
-            repository.state.value.schedule != null &&
-                (!fullScreen || repository.state.value.detailsLoaded)
+            repository.state.value.schedule != null && repository.state.value.detailsLoaded
         }
         compose.waitForIdle()
     }
@@ -258,7 +254,16 @@ class CaptainsUiTest {
             GiveawayWebSocketManager.instance.disconnect(clearSession = true)
             popups.captainsScreen(false)
             popups.available(EventPopup.CAPTAINS, false)
+            popups.minimize(EventPopup.CAPTAINS)
             scope.cancel()
+        }
+        previousBubblePosition?.let { position ->
+            runBlocking {
+                (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+                        as BurkeBlackApplication)
+                    .appSettings
+                    .setCaptainBubblePosition(position)
+            }
         }
     }
 
@@ -295,14 +300,12 @@ class CaptainsUiTest {
         compose.onNodeWithTag("captains-content").performScrollToIndex(4)
         screenshot("captains-standings")
         compose.onNodeWithTag("captains-content").performScrollToIndex(0)
-        compose.onNodeWithText("The crew").performClick()
+        selectSection("The crew")
         compose.onNodeWithText("The Bold").assertExists()
         compose.onNodeWithTag("captains-content").performScrollToIndex(4)
         screenshot("captains-profile")
-        compose.onNodeWithContentDescription("Next captain").performClick()
-        compose.onNodeWithText("The Brute").assertExists()
         compose.onNodeWithTag("captains-content").performScrollToIndex(0)
-        compose.onNodeWithText("Rankings").performClick()
+        selectSection("Rankings")
         compose.onNodeWithText("Fixture sailor").assertExists()
         compose.onNodeWithText("All time").performClick()
         compose.onNodeWithText("Fixture quartermaster").assertExists()
@@ -310,8 +313,14 @@ class CaptainsUiTest {
         assertTrue(source.requests.isEmpty())
     }
 
+    private fun selectSection(name: String) {
+        compose.onNodeWithTag("captains-content").performScrollToIndex(0)
+        compose.onNodeWithText(name).performClick()
+    }
+
     private fun confirmationAndLostResponseRecoverWithoutAnotherSpend() {
-        compose.onNodeWithText("Vote").performClick()
+        selectSection("Vote")
+        compose.onNodeWithTag("captains-content").performScrollToIndex(5)
         compose.onNodeWithText("Captain", useUnmergedTree = false).performClick()
         compose.onNodeWithContentDescription("Spend one more token").performClick()
         compose.onNodeWithText("Cast 2 votes").assertIsDisplayed().assertIsEnabled()
@@ -336,37 +345,89 @@ class CaptainsUiTest {
     }
 
     private fun newestPopupWinsAndTheVoteDraftSurvivesPreemption() {
-        compose.runOnIdle { fullScreenState.value = false }
-        compose.runOnIdle { repository.popups.present(EventPopup.CAPTAINS) }
-        compose.onNodeWithText("Open Captains").assertExists()
+        compose.onNodeWithContentDescription("Minimize Captains").performClick()
+        compose.onNodeWithContentDescription("Open Captains").performClick()
+        compose.onNodeWithText("Vote").assertIsDisplayed()
+        compose.onNodeWithTag("captains-content").performScrollToIndex(5)
         compose.onNodeWithText("Captain").performClick()
         compose.onNodeWithContentDescription("Spend one more token").performClick()
         injectGiveaway("newraffle")
         compose.onNodeWithText("GIVEAWAY").assertExists()
-        compose.onNodeWithText("Open Captains").assertDoesNotExist()
-        compose.onNodeWithText("Captain voting").performClick()
+        compose.onNodeWithContentDescription("Minimize Captains").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Open Captains").performClick()
         compose.onNodeWithText("Cast 2 votes").assertExists()
         compose.runOnIdle { repository.closeConfirmation() }
         screenshot("captains-popup")
-        compose.onNodeWithContentDescription("Minimize captain voting").performClick()
-        compose.onNodeWithText("Captain voting").assertExists()
+        compose.onNodeWithContentDescription("Minimize Captains").performClick()
+        compose.onNodeWithContentDescription("Open Captains").assertExists()
         compose.onNodeWithText("Giveaway Active").assertExists()
         screenshot("captains-minimized")
         injectGiveaway("rafflewinner")
         compose.onNodeWithText("GIVEAWAY").assertExists()
         compose.runOnIdle { repository.refresh() }
-        compose.onNodeWithText("Open Captains").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Minimize Captains").assertDoesNotExist()
         assertEquals(2, source.requests.size)
+    }
+
+    private fun draggableCaptainCircleRestoresTheSamePage() {
+        selectSection("The crew")
+        compose.onNodeWithContentDescription("Next captain").performClick()
+        compose.onNodeWithText("The Brute").assertExists()
+        compose.onNodeWithContentDescription("Minimize Captains").performClick()
+        val bubble = compose.onNodeWithTag("captains.restore")
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("captains.restore").fetchSemanticsNodes().isNotEmpty()
+        }
+        bubble.assertWidthIsEqualTo(60.dp).assertHeightIsEqualTo(60.dp)
+        val original = bubble.fetchSemanticsNode().boundsInRoot
+        bubble.performTouchInput { swipe(center, center + Offset(-180f, -260f), 400) }
+        val moved = bubble.fetchSemanticsNode().boundsInRoot
+        assertTrue(moved.left < original.left - 60)
+        assertTrue(moved.top < original.top - 60)
+        compose.onNodeWithContentDescription("Minimize Captains").assertDoesNotExist()
+        val settings =
+            (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+                    as BurkeBlackApplication)
+                .appSettings
+        compose.waitUntil(10_000) {
+            val position = runBlocking { settings.captainBubblePositionFlow.first() }
+            position.x < 0.99f && position.y < 0.99f
+        }
+        val saved = runBlocking { settings.captainBubblePositionFlow.first() }
+        assertTrue(saved.x in 0f..1f && saved.y in 0f..1f)
+        assertTrue(saved.x < 0.99f && saved.y < 0.99f)
+        screenshot("captains-floating-moved")
+        bubble.performClick()
+        compose.onNodeWithText("The Brute").assertExists()
+        compose.onNodeWithTag("captains-content").performScrollToIndex(0)
+        compose.onNodeWithText("The crew").assertIsSelected()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        val restored = bubble.fetchSemanticsNode().boundsInRoot
+        assertEquals(moved.left, restored.left, 3f)
+        assertEquals(moved.top, restored.top, 3f)
+        // Move right to the content edge, then left; the system inset is applied once.
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        bubble.performTouchInput {
+            swipe(center, Offset(root.right - restored.left - 2f, center.y), 400)
+        }
+        val right = bubble.fetchSemanticsNode().boundsInRoot
+        val inset = with(compose.density) { 12.dp.toPx() }
+        assertEquals(inset, root.right - right.right, 3f)
+        bubble.performTouchInput { swipe(center, Offset(-right.left + 2f, center.y), 400) }
+        assertEquals(inset, bubble.fetchSemanticsNode().boundsInRoot.left, 3f)
+        bubble.performClick()
+        compose.onNodeWithText("The crew").assertIsSelected()
+        selectSection("Vote")
     }
 
     private fun standardThemeAndLargerTextRemainUsable() {
         compose.runOnIdle {
             popups.minimize(EventPopup.GIVEAWAY)
-            fullScreenState.value = true
+            popups.present(EventPopup.CAPTAINS)
             pirateState.value = false
             fontState.floatValue = 1.5f
         }
-        compose.onNodeWithText("The crew").assertIsDisplayed().performClick()
+        selectSection("The crew")
         compose.onNodeWithText("The Bold").assertExists()
         compose.onNodeWithTag("captains-content").performScrollToIndex(4)
         screenshot("captains-large-text-standard")
@@ -382,6 +443,7 @@ class CaptainsUiTest {
             repository.setSession(SessionIdentity("123", "synthetic-ui-session"))
         }
         confirmationAndLostResponseRecoverWithoutAnotherSpend()
+        draggableCaptainCircleRestoresTheSamePage()
         newestPopupWinsAndTheVoteDraftSurvivesPreemption()
         standardThemeAndLargerTextRemainUsable()
         compose.runOnIdle {
@@ -390,9 +452,9 @@ class CaptainsUiTest {
             fontState.floatValue = 1f
         }
         compose.onNodeWithTag("captains-content").performScrollToIndex(0)
-        compose.onNodeWithText("Vote").performClick()
+        selectSection("Vote")
         screenshot("captains-tablet-vote")
-        compose.onNodeWithText("The crew").performClick()
+        selectSection("The crew")
         screenshot("captains-tablet-profile")
     }
 

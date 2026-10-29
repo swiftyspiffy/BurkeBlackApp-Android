@@ -117,12 +117,12 @@ fun CaptainsScreen(repository: CaptainsRepository, onBack: () -> Unit, onSignIn:
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        "Back",
+                        Icons.Default.RemoveCircleOutline,
+                        "Minimize Captains",
                         tint = PirateTheme.accentColor,
                     )
                 }
-                Text("Back to the crew", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                Text("Minimize", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = repository::retry) {
                     Icon(Icons.Default.Refresh, "Refresh Captains", tint = PirateTheme.accentColor)
@@ -378,36 +378,24 @@ fun ElectionDeadline(state: CaptainsState, now: Long) {
 }
 
 @Composable
-fun CaptainCandidateCard(
-    captain: Captain,
-    state: CaptainsState,
-    compact: Boolean = false,
-    onClick: () -> Unit,
-) {
+fun CaptainCandidateCard(captain: Captain, state: CaptainsState, onClick: () -> Unit) {
     val total = state.candidates.sumOf { it.votes.toDouble() }
     val share = if (total > 0) (captain.votes / total).toFloat().coerceIn(0f, 1f) else 0f
     PirateCard(
         Modifier.fillMaxWidth(),
         onClick = if (state.pending == null && !state.sending) onClick else null,
-        textureIntensity = if (compact) 0.02f else 0.045f,
     ) {
-        Column(
-            Modifier.padding(if (compact) 10.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                CaptainPortrait(
-                    captain,
-                    Modifier.size(if (compact) 44.dp else 68.dp).clip(CircleShape),
-                )
+                CaptainPortrait(captain, Modifier.size(68.dp).clip(CircleShape))
                 Column(Modifier.weight(1f)) {
                     Text(
                         captain.name,
                         fontFamily = PirateTheme.fontFamily,
-                        fontSize = if (compact) 21.sp else 25.sp,
+                        fontSize = 25.sp,
                         color = PirateTheme.accentColor,
                     )
                     Text(captain.title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.65f))
@@ -656,9 +644,7 @@ fun CaptainVoteDialog(repository: CaptainsRepository, state: CaptainsState, onSi
                 }
             }
             Column(
-                Modifier.weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

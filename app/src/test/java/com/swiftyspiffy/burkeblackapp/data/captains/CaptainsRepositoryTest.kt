@@ -278,12 +278,15 @@ class CaptainsRepositoryTest {
         assertTrue(EventPopup.CAPTAINS in popups.state.value.available)
         popups.present(EventPopup.CAPTAINS)
         assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
+        repo.setPopupsEnabled(false) // An unrelated settings write must not close manual browsing.
+        assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
         repo.setScreenVisible(true)
         repo.setPopupsEnabled(true)
         runCurrent()
-        assertNull(popups.state.value.expanded)
+        assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
         assertTrue(repo.state.value.detailsLoaded)
         assertEquals(1, store.presentations)
+        popups.minimize(EventPopup.CAPTAINS)
         repo.setScreenVisible(false)
         repo.refresh()
         runCurrent()
@@ -383,7 +386,14 @@ class CaptainsRepositoryTest {
         assertEquals(EventPopup.GIVEAWAY, popups.state.value.expanded)
         popups.present(EventPopup.CAPTAINS)
         repo.setScreenVisible(true)
-        assertNull(popups.state.value.expanded)
+        assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
+        popups.present(EventPopup.CAPTAINS)
+        assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
+        popups.present(EventPopup.GIVEAWAY)
+        assertEquals(EventPopup.GIVEAWAY, popups.state.value.expanded)
+        repo.setScreenVisible(false)
+        popups.present(EventPopup.CAPTAINS)
+        assertEquals(EventPopup.CAPTAINS, popups.state.value.expanded)
         repo.stop()
     }
 
@@ -406,6 +416,10 @@ class CaptainsRepositoryTest {
         runCurrent()
         assertFalse(repo.state.value.active(clock()))
         assertFalse(EventPopup.CAPTAINS in popups.state.value.available)
+        assertEquals(
+            EventPopup.CAPTAINS,
+            popups.state.value.expanded,
+        ) // Public browsing stays open.
         source.start = source.end
         source.end += 3_600_000
         advanceTimeBy(3_000)

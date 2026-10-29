@@ -28,7 +28,10 @@ class EventPopupCoordinator {
         _state.update {
             it.copy(
                 available = if (available) it.available + kind else it.available - kind,
-                expanded = if (!available && it.expanded == kind) null else it.expanded,
+                // Captains remains a public browsing page after an election closes.
+                expanded =
+                    if (!available && kind == EventPopup.GIVEAWAY && it.expanded == kind) null
+                    else it.expanded,
             )
         }
     }
@@ -36,11 +39,8 @@ class EventPopupCoordinator {
     /** Only a new alert or an explicit user action calls this, never a tally refresh. */
     fun present(kind: EventPopup) {
         _state.update {
-            it.copy(
-                available = it.available + kind,
-                expanded =
-                    if (kind == EventPopup.CAPTAINS && it.captainsScreenVisible) null else kind,
-            )
+            if (kind == EventPopup.CAPTAINS && it.captainsScreenVisible) return@update it
+            it.copy(available = it.available + kind, expanded = kind)
         }
     }
 
@@ -49,11 +49,6 @@ class EventPopupCoordinator {
     }
 
     fun captainsScreen(visible: Boolean) {
-        _state.update {
-            it.copy(
-                captainsScreenVisible = visible,
-                expanded = if (visible && it.expanded == EventPopup.CAPTAINS) null else it.expanded,
-            )
-        }
+        _state.update { it.copy(captainsScreenVisible = visible) }
     }
 }

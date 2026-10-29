@@ -54,6 +54,7 @@ import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import com.swiftyspiffy.burkeblackapp.navigation.Screen
 import com.swiftyspiffy.burkeblackapp.navigation.bottomNavItems
 import com.swiftyspiffy.burkeblackapp.data.captains.CaptainsRepository
+import com.swiftyspiffy.burkeblackapp.data.EventPopup
 import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsViewModel
 import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsSettingsScreen
@@ -150,6 +151,7 @@ private fun MainApp(
     val uri by authUri
     val captainsViewModel: CaptainsViewModel = viewModel()
     val captains = captainsViewModel.repository
+    val eventPresentation by captains.popups.state.collectAsState()
     var returnToCaptains by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val signInToCaptains: () -> Unit = {
@@ -180,9 +182,13 @@ private fun MainApp(
             val callbackData = TwitchAuthManager.parseCallbackUri(authContext, callbackUri)
             if (callbackData != null) {
                 accountViewModel.handleAuthCallback(callbackData)
-                navController.navigate(if (returnToCaptains) Screen.Captains.route else Screen.Account.route) {
-                    popUpTo(Screen.Home.route)
-                    launchSingleTop = true
+                if (returnToCaptains) {
+                    captains.popups.present(EventPopup.CAPTAINS)
+                } else {
+                    navController.navigate(Screen.Account.route) {
+                        popUpTo(Screen.Home.route)
+                        launchSingleTop = true
+                    }
                 }
             }
             returnToCaptains = false
@@ -226,7 +232,7 @@ private fun MainApp(
     }
 
     Scaffold(
-        bottomBar = { BottomNavBar(navController) },
+        bottomBar = { if (eventPresentation.expanded != EventPopup.CAPTAINS) BottomNavBar(navController) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -242,7 +248,6 @@ private fun MainApp(
             EventPopupsOverlay(
                 captains,
                 isLoggedIn,
-                onOpenCaptains = { navController.navigate(Screen.Captains.route) { launchSingleTop = true } },
                 onSignIn = signInToCaptains
             )
 
@@ -361,7 +366,7 @@ private fun AppNavHost(
         composable(Screen.Crew.route) {
             CrewScreen(
                 username = username,
-                onNavigateToCaptains = { navController.navigate(Screen.Captains.route) },
+                onNavigateToCaptains = { captains.popups.present(EventPopup.CAPTAINS) },
                 onNavigateToClipVoting = { navController.navigate(Screen.ClipVoting.route) },
                 onNavigateToCommunityServers = { navController.navigate(Screen.CommunityServers.route) },
                 onNavigateToEmotes = { navController.navigate(Screen.EmotesGallery.route) },
@@ -372,7 +377,11 @@ private fun AppNavHost(
         }
 
         composable(Screen.Captains.route) {
-            CaptainsScreen(captains, onBack = { navController.popBackStack() }, onSignIn = onCaptainsSignIn)
+            // Restore older navigation stacks into the same presentation used by alerts and Crew.
+            LaunchedEffect(Unit) {
+                if (!navController.popBackStack()) navController.navigate(Screen.Crew.route)
+                captains.popups.present(EventPopup.CAPTAINS)
+            }
         }
         composable(Screen.CaptainsSettings.route) {
             CaptainsSettingsScreen(onBack = { navController.popBackStack() })

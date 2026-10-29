@@ -183,6 +183,7 @@ class CaptainsRepository(
     }
 
     fun setPopupsEnabled(enabled: Boolean) {
+        if (popupsEnabled == enabled) return
         popupsEnabled = enabled
         if (!enabled) popups.minimize(EventPopup.CAPTAINS) else considerPopup()
     }

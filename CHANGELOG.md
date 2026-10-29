@@ -2,6 +2,8 @@
 
 ## Version 1.9.0
 
+- Unified election alerts, Crew navigation, and restoring into the full Captains page
+- Added a draggable pirate captain circle that remembers its position and stays reachable after rotation
 - Added Captains voting, token balances, character profiles, and election/all-time rankings
 - Added public Captains browsing under Crew, with Twitch sign-in for voting
 - Added election popups with persistent minimization and a separate alert preference

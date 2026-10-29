@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
@@ -51,6 +52,22 @@ class AppSettings(private val context: Context) : CaptainsStore {
 
     private val captainPopups = booleanPreferencesKey("settings.captains.popupsEnabled")
     private val captainElection = stringPreferencesKey("settings.captains.lastElection")
+    private val captainBubbleX = floatPreferencesKey("settings.captains.bubble.x")
+    private val captainBubbleY = floatPreferencesKey("settings.captains.bubble.y")
+    val captainBubblePositionFlow: Flow<CaptainBubblePosition> = context.settingsDataStore.data.map {
+        CaptainBubblePosition(
+            (it[captainBubbleX] ?: 1f).takeIf { value -> value.isFinite() }?.coerceIn(0f, 1f) ?: 1f,
+            (it[captainBubbleY] ?: 1f).takeIf { value -> value.isFinite() }?.coerceIn(0f, 1f) ?: 1f
+        )
+    }
+
+    suspend fun setCaptainBubblePosition(position: CaptainBubblePosition) {
+        context.settingsDataStore.edit {
+            it[captainBubbleX] = position.x.coerceIn(0f, 1f)
+            it[captainBubbleY] = position.y.coerceIn(0f, 1f)
+        }
+    }
+
     val captainPopupsEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[captainPopups] ?: true }
 
     suspend fun setCaptainPopupsEnabled(enabled: Boolean) {
