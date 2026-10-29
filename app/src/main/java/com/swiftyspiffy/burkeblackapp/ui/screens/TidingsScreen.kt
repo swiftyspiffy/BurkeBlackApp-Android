@@ -1,30 +1,33 @@
 package com.swiftyspiffy.burkeblackapp.ui.screens
 
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.LevelListDrawable
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.widget.TextView
-import coil.imageLoader
-import coil.request.ImageRequest
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -35,12 +38,8 @@ import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -66,22 +65,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
 import com.swiftyspiffy.burkeblackapp.data.models.NewsArticle
 import com.swiftyspiffy.burkeblackapp.ui.components.DateUtils
+import com.swiftyspiffy.burkeblackapp.ui.components.PirateCard
+import com.swiftyspiffy.burkeblackapp.ui.components.PiratePageHeader
+import com.swiftyspiffy.burkeblackapp.ui.components.pirateCardSurface
+import com.swiftyspiffy.burkeblackapp.ui.components.pirateScreenBackground
 import com.swiftyspiffy.burkeblackapp.ui.theme.PirateTheme
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
@@ -94,7 +96,7 @@ fun TidingsScreen(
     onNewTiding: (() -> Unit)? = null,
     onShowDeleted: (() -> Unit)? = null,
     onEditTiding: ((NewsArticle) -> Unit)? = null,
-    refreshKey: Int = 0
+    refreshKey: Int = 0,
 ) {
     val scope = rememberCoroutineScope()
     var articles by remember { mutableStateOf<List<NewsArticle>>(emptyList()) }
@@ -104,26 +106,28 @@ fun TidingsScreen(
     var canCreateNews by remember { mutableStateOf(false) }
 
     /**
-     * Resolve the user's news permission first; mods/Burke fetch via /mod/news
-     * (every article, every platform). Everyone else stays on the public
-     * /news?platform=android view.
+     * Resolve the user's news permission first; mods/Burke fetch via /mod/news (every article,
+     * every platform). Everyone else stays on the public /news?platform=android view.
      */
     fun fetchAll() {
         scope.launch {
             isLoading = true
             errorMessage = null
             try {
-                val isMod = if (token.isNullOrBlank()) false else {
-                    val perms = ApiClient.api.fetchModPermissions("Bearer $token")
-                    perms.success && perms.data?.news == "1"
-                }
+                val isMod =
+                    if (token.isNullOrBlank()) false
+                    else {
+                        val perms = ApiClient.api.fetchModPermissions("Bearer $token")
+                        perms.success && perms.data?.news == "1"
+                    }
                 canCreateNews = isMod
 
-                val response = if (isMod && !token.isNullOrBlank()) {
-                    ApiClient.api.fetchModNews("Bearer $token")
-                } else {
-                    ApiClient.api.fetchNews()
-                }
+                val response =
+                    if (isMod && !token.isNullOrBlank()) {
+                        ApiClient.api.fetchModNews("Bearer $token")
+                    } else {
+                        ApiClient.api.fetchNews()
+                    }
                 if (response.success && response.data != null) {
                     articles = response.data.articles
                     AppLogger.log("Tidings: loaded ${articles.size} articles (mod=$isMod)")
@@ -145,6 +149,7 @@ fun TidingsScreen(
 
     // Detail view
     if (selectedArticle != null) {
+        BackHandler { selectedArticle = null }
         TidingsDetailScreen(
             article = selectedArticle!!,
             canDelete = canCreateNews && !token.isNullOrBlank(),
@@ -153,41 +158,52 @@ fun TidingsScreen(
                 selectedArticle = null
                 fetchAll()
             },
-            onEdit = onEditTiding?.let { edit ->
-                { article ->
-                    selectedArticle = null
-                    edit(article)
-                }
-            },
-            token = token
+            onEdit =
+                onEditTiding?.let { edit ->
+                    { article ->
+                        selectedArticle = null
+                        edit(article)
+                    }
+                },
+            token = token,
         )
         return
     }
 
     val canRestore = canCreateNews && onShowDeleted != null
-    val titleLongPressModifier: Modifier = rememberHoldToTriggerModifier(
-        holdMs = 5000L,
-        enabled = canRestore
-    ) { onShowDeleted?.invoke() }
+    val titleLongPressModifier: Modifier =
+        rememberHoldToTriggerModifier(holdMs = 5000L, enabled = canRestore) {
+            onShowDeleted?.invoke()
+        }
 
     Scaffold(
+        modifier = Modifier.pirateScreenBackground(),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             if (onBack != null) {
                 TopAppBar(
+                    windowInsets = WindowInsets(0),
                     title = {
                         Text(
                             "Tidings",
                             fontFamily = PirateTheme.fontFamily,
                             color = PirateTheme.accentColor,
-                            modifier = titleLongPressModifier
+                            modifier = titleLongPressModifier,
                         )
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White,
+                            )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        ),
                 )
             }
         },
@@ -196,111 +212,78 @@ fun TidingsScreen(
                 FloatingActionButton(
                     onClick = onNewTiding,
                     containerColor = PirateTheme.accentColor,
-                    contentColor = Color.Black
+                    contentColor = Color.Black,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "New Tiding")
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color.Transparent,
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = isLoading,
             onRefresh = { fetchAll() },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            when {
-                isLoading && articles.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = PirateTheme.accentColor)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                "Fetchin' the latest dispatches...",
-                                fontFamily = PirateTheme.fontFamily,
-                                color = Color.White.copy(alpha = 0.5f),
-                                fontSize = 14.sp
-                            )
-                        }
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(320.dp),
+                modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 960.dp).fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                if (onBack == null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PiratePageHeader(
+                            "Tidings",
+                            Icons.Default.Newspaper,
+                            "News from across the seven seas.",
+                            titleLongPressModifier,
+                        )
                     }
                 }
-                errorMessage != null && articles.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                errorMessage!!,
-                                fontFamily = PirateTheme.fontFamily,
-                                color = Color.White.copy(alpha = 0.5f),
-                                fontSize = 16.sp
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = { fetchAll() },
-                                colors = ButtonDefaults.buttonColors(containerColor = PirateTheme.accentColor)
+                if (articles.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PirateCard(Modifier.fillMaxWidth()) {
+                            Column(
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 34.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                Text("Try Again", color = Color.Black, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-                articles.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Newspaper,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.2f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "No tidings to report, Captain",
-                                fontFamily = PirateTheme.fontFamily,
-                                color = Color.White.copy(alpha = 0.4f),
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (onBack == null) {
-                            // Tab header
-                            item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = titleLongPressModifier
-                                ) {
-                                    Icon(Icons.Default.Newspaper, contentDescription = null, tint = PirateTheme.accentColor, modifier = Modifier.size(28.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Tidings", fontFamily = PirateTheme.fontFamily, fontSize = 28.sp, color = PirateTheme.accentColor)
-                                }
+                                if (isLoading)
+                                    CircularProgressIndicator(color = PirateTheme.accentColor)
+                                else
+                                    Icon(
+                                        Icons.Default.Newspaper,
+                                        null,
+                                        tint = PirateTheme.accentColor.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(36.dp),
+                                    )
                                 Text(
-                                    "News from across the seven seas",
+                                    when {
+                                        isLoading -> "Fetchin’ the latest dispatches…"
+                                        errorMessage != null -> errorMessage!!
+                                        else -> "No tidings to report, Captain"
+                                    },
                                     fontFamily = PirateTheme.fontFamily,
-                                    fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.5f)
+                                    fontSize = 16.sp,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 )
+                                if (!isLoading && errorMessage != null) {
+                                    Button(onClick = { fetchAll() }) { Text("Try Again") }
+                                }
                             }
-                        } else {
-                            item { Spacer(modifier = Modifier.height(4.dp)) }
                         }
-                        items(articles) { article ->
-                            ArticleCard(
-                                article = article,
-                                showPlatformBadges = canCreateNews,
-                                onClick = { selectedArticle = article }
-                            )
-                        }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                } else {
+                    items(articles, key = { it.id }) { article ->
+                        ArticleCard(
+                            article,
+                            showPlatformBadges = canCreateNews,
+                            onClick = { selectedArticle = article },
+                        )
                     }
                 }
             }
@@ -309,27 +292,9 @@ fun TidingsScreen(
 }
 
 @Composable
-private fun ArticleCard(
-    article: NewsArticle,
-    showPlatformBadges: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    PirateTheme.cardGradient,
-                    RoundedCornerShape(16.dp)
-                )
-                .padding(16.dp)
-        ) {
+private fun ArticleCard(article: NewsArticle, showPlatformBadges: Boolean, onClick: () -> Unit) {
+    PirateCard(Modifier.fillMaxWidth(), onClick = onClick, textureIntensity = 0.035f) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = article.subject,
@@ -338,7 +303,7 @@ private fun ArticleCard(
                     fontSize = 18.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 if (showPlatformBadges) {
                     Spacer(modifier = Modifier.width(8.dp))
@@ -350,27 +315,24 @@ private fun ArticleCard(
                 Text(
                     text = article.createdByUsername,
                     color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
                 )
-                Text(
-                    text = " \u2022 ",
-                    color = Color.White.copy(alpha = 0.3f),
-                    fontSize = 12.sp
-                )
+                Text(text = " \u2022 ", color = Color.White.copy(alpha = 0.3f), fontSize = 12.sp)
                 Text(
                     text = DateUtils.formatRelativeTime(article.createdAt),
                     color = Color.White.copy(alpha = 0.4f),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
                 )
             }
             // Preview of body (strip markdown)
-            val preview = article.body
-                .replace(Regex("#+ "), "")
-                .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
-                .replace(Regex("\\[(.+?)\\]\\(.+?\\)"), "$1")
-                .replace(Regex("!\\[.*?\\]\\(.*?\\)"), "")
-                .replace("\n", " ")
-                .take(120)
+            val preview =
+                article.body
+                    .replace(Regex("#+ "), "")
+                    .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
+                    .replace(Regex("\\[(.+?)\\]\\(.+?\\)"), "$1")
+                    .replace(Regex("!\\[.*?\\]\\(.*?\\)"), "")
+                    .replace("\n", " ")
+                    .take(120)
             if (preview.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -378,7 +340,7 @@ private fun ArticleCard(
                     color = Color.White.copy(alpha = 0.4f),
                     fontSize = 13.sp,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -389,7 +351,7 @@ private fun ArticleCard(
 private fun PlatformBadges(article: NewsArticle) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         PlatformBadge(Icons.Default.PhoneIphone, "iOS", article.isVisibleOnIos == 1)
         PlatformBadge(Icons.Default.PhoneAndroid, "Android", article.isVisibleOnAndroid == 1)
@@ -401,13 +363,13 @@ private fun PlatformBadges(article: NewsArticle) {
 private fun PlatformBadge(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     description: String,
-    on: Boolean
+    on: Boolean,
 ) {
     Icon(
         imageVector = icon,
         contentDescription = if (on) "$description visible" else "$description hidden",
         tint = if (on) PirateTheme.accentColor else Color.White.copy(alpha = 0.18f),
-        modifier = Modifier.size(16.dp)
+        modifier = Modifier.size(16.dp),
     )
 }
 
@@ -419,7 +381,7 @@ private fun TidingsDetailScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onEdit: ((NewsArticle) -> Unit)?,
-    token: String?
+    token: String?,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -427,117 +389,129 @@ private fun TidingsDetailScreen(
     var isDeleting by remember { mutableStateOf(false) }
 
     Scaffold(
+        modifier = Modifier.pirateScreenBackground(),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { },
+                windowInsets = WindowInsets(0),
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White,
+                        )
                     }
                 },
                 actions = {
                     if (canDelete && onEdit != null) {
-                        IconButton(
-                            onClick = { onEdit(article) },
-                            enabled = !isDeleting
-                        ) {
+                        IconButton(onClick = { onEdit(article) }, enabled = !isDeleting) {
                             Icon(
                                 Icons.Default.Edit,
                                 contentDescription = "Edit",
-                                tint = PirateTheme.accentColor
+                                tint = PirateTheme.accentColor,
                             )
                         }
                     }
                     if (canDelete) {
-                        IconButton(
-                            onClick = { confirmDeleteOpen = true },
-                            enabled = !isDeleting
-                        ) {
+                        IconButton(onClick = { confirmDeleteOpen = true }, enabled = !isDeleting) {
                             if (isDeleting) {
                                 CircularProgressIndicator(
                                     color = PirateTheme.accentColor,
                                     strokeWidth = 2.dp,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(20.dp),
                                 )
                             } else {
                                 Icon(
                                     Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = Color(0xFFFF6B6B)
+                                    tint = Color(0xFFFF6B6B),
                                 )
                             }
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    ),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color.Transparent,
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        Box(
+            modifier =
+                Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Text(
-                text = article.subject,
-                fontFamily = PirateTheme.fontFamily,
-                fontSize = 24.sp,
-                color = PirateTheme.accentColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "By ${article.createdByUsername} \u2022 ${DateUtils.formatRelativeTime(article.createdAt)}",
-                color = Color.White.copy(alpha = 0.5f),
-                fontSize = 13.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier =
+                    Modifier.widthIn(max = 720.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .pirateCardSurface(cornerRadius = 18.dp, textureIntensity = 0.035f)
+                        .padding(18.dp)
+            ) {
+                Text(
+                    text = article.subject,
+                    fontFamily = PirateTheme.fontFamily,
+                    fontSize = 24.sp,
+                    color = PirateTheme.accentColor,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text =
+                        "By ${article.createdByUsername} \u2022 ${DateUtils.formatRelativeTime(article.createdAt)}",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 13.sp,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Render markdown as HTML in a TextView
-            val htmlContent = markdownToHtml(article.body)
-            val goldColor = PirateTheme.accentColor.toArgb()
-            val whiteColor = Color.White.copy(alpha = 0.8f).toArgb()
+                // Render markdown as HTML in a TextView
+                val htmlContent = markdownToHtml(article.body)
+                val goldColor = PirateTheme.accentColor.toArgb()
+                val whiteColor = Color.White.copy(alpha = 0.8f).toArgb()
 
-            AndroidView(
-                factory = { context ->
-                    TextView(context).apply {
-                        setTextColor(whiteColor)
-                        setLinkTextColor(goldColor)
-                        textSize = 15f
-                        movementMethod = LinkMovementMethod.getInstance()
+                AndroidView(
+                    factory = { context ->
+                        TextView(context).apply {
+                            setTextColor(whiteColor)
+                            setLinkTextColor(goldColor)
+                            textSize = 15f
+                            movementMethod = LinkMovementMethod.getInstance()
 
-                        val tv = this
-                        val imageGetter = Html.ImageGetter { source ->
-                            val drawable = LevelListDrawable()
-                            val loader = context.imageLoader
-                            val request = ImageRequest.Builder(context)
-                                .data(source)
-                                .target { result ->
-                                    val bitmap = (result as BitmapDrawable)
-                                    val width = tv.width.takeIf { it > 0 } ?: bitmap.intrinsicWidth
-                                    val ratio = width.toFloat() / bitmap.intrinsicWidth
-                                    val height = (bitmap.intrinsicHeight * ratio).toInt()
-                                    bitmap.setBounds(0, 0, width, height)
-                                    drawable.addLevel(0, 0, bitmap)
-                                    drawable.setBounds(0, 0, width, height)
-                                    drawable.level = 0
-                                    tv.text = tv.text // trigger re-layout
-                                    tv.invalidate()
-                                }
-                                .build()
-                            loader.enqueue(request)
-                            drawable
+                            val tv = this
+                            val imageGetter = Html.ImageGetter { source ->
+                                val drawable = LevelListDrawable()
+                                val loader = context.imageLoader
+                                val request = ImageRequest.Builder(context)
+                                    .data(source)
+                                    .target { result ->
+                                        val bitmap = (result as BitmapDrawable)
+                                        val width = tv.width.takeIf { it > 0 } ?: bitmap.intrinsicWidth
+                                        val ratio = width.toFloat() / bitmap.intrinsicWidth
+                                        val height = (bitmap.intrinsicHeight * ratio).toInt()
+                                        bitmap.setBounds(0, 0, width, height)
+                                        drawable.addLevel(0, 0, bitmap)
+                                        drawable.setBounds(0, 0, width, height)
+                                        drawable.level = 0
+                                        tv.text = tv.text // trigger re-layout
+                                        tv.invalidate()
+                                    }
+                                    .build()
+                                loader.enqueue(request)
+                                drawable
+                            }
+                            text = Html.fromHtml(htmlContent, Html.FROM_HTML_MODE_COMPACT, imageGetter, null)
                         }
-                        text = Html.fromHtml(htmlContent, Html.FROM_HTML_MODE_COMPACT, imageGetter, null)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 

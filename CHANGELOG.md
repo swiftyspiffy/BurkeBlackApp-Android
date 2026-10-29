@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Redesigned Helm, Crew, Tidings, Ports, and Rigging to match the iOS app
+- Added textured pirate cards, decorative headers, gold accents, and responsive layouts
+- Added the three-channel stream deck with live previews, watch links, and offline countdowns
+- Added the 24/7 Archive feature in Ports and shared stream status across tabs
+
 ## Version 1.7.5
 
 - Giveaway controls now show the options supported by the server

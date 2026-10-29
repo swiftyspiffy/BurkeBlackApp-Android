@@ -24,7 +24,7 @@ object PirateTheme {
 
     val cardGradient: Brush
         @Composable get() = if (LocalPirateTheme.current) {
-            Brush.horizontalGradient(listOf(Color(0xFF1C1208), Color(0xFF2A1E10)))
+            Brush.horizontalGradient(listOf(Color(0xFF291F14), Color(0xFF1A120A)))
         } else {
             Brush.horizontalGradient(listOf(DarkSurface, DarkSurface))
         }

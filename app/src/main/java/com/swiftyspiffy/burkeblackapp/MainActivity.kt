@@ -30,6 +30,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.swiftyspiffy.burkeblackapp.ui.screens.HomeViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swiftyspiffy.burkeblackapp.data.websocket.GiveawayWebSocketManager
@@ -221,17 +228,21 @@ private fun BottomNavBar(navController: NavHostController) {
     val font = PirateTheme.fontFamily
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color(0xFF0D0C0A),
         contentColor = Color.White,
         windowInsets = WindowInsets(0),
         modifier = Modifier
+            .drawBehind {
+                drawLine(accent.copy(alpha = 0.2f), androidx.compose.ui.geometry.Offset.Zero,
+                    androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx())
+            }
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .height(56.dp)
+            .height(68.dp)
     ) {
         bottomNavItems.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label, fontFamily = font) },
+                label = { Text(item.label, fontFamily = font, fontSize = 12.sp, maxLines = 1) },
                 selected = currentRoute == item.screen.route,
                 onClick = {
                     if (currentRoute != item.screen.route) {
@@ -262,6 +273,16 @@ private fun AppNavHost(
     pendingTidingsArticleId: Int? = null,
     onTidingsArticleConsumed: () -> Unit = {}
 ) {
+    val streamDeckViewModel: HomeViewModel = viewModel()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    LaunchedEffect(streamDeckViewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) {
+                streamDeckViewModel.refresh()
+                delay(60_000)
+            }
+        }
+    }
     val token by accountViewModel.sessionManager.token.collectAsState(initial = null)
     val username by accountViewModel.username.collectAsState()
     val isModerator by accountViewModel.isModerator.collectAsState()
@@ -293,6 +314,7 @@ private fun AppNavHost(
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
+                viewModel = streamDeckViewModel,
                 onNavigateToAccount = { navController.navigate(Screen.Account.route) }
             )
         }
@@ -390,7 +412,7 @@ private fun AppNavHost(
         }
 
         composable(Screen.Socials.route) {
-            SocialsScreen()
+            SocialsScreen(streamDeckViewModel)
         }
 
         composable(Screen.Soundbytes.route) {

@@ -48,7 +48,7 @@ Whether you're a long-time crew member or a new viewer, the app gives you everyt
 
 ## Features
 
-- **Live Stream Status** - see when BurkeBlack is live with real-time viewer counts, or check the countdown to the next stream. Tap to jump straight to Twitch.
+- **Live Stream Deck** - switch between BurkeBlack, Burke40k, and 24/7 Classics, with live previews, viewer counts, watch links, and a countdown to the next main stream.
 - **Real-Time Giveaways** - enter giveaways directly from the app as they happen on stream. Track everything you've entered, won, and donated in one place.
 - **Soundbytes** - browse, preview, and send soundbytes to the stream. Filter by genre, search by name, and track your credits and send history.
 - **Captain's Quarters** - your personal dashboard with doubloons, donations, bits cheered, subscription details, giveaway history, and achievement badges.

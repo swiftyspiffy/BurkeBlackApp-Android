@@ -12,6 +12,9 @@ interface BurkeBlackApi {
     @GET("stream-status")
     suspend fun fetchStreamStatus(): ApiResponse<StreamStatusResponse>
 
+    @GET("stream-deck")
+    suspend fun fetchStreamDeck(): ApiResponse<StreamDeckData>
+
     @GET("soundbytes-status")
     suspend fun fetchSoundbytesStatus(): ApiResponse<SoundbytesStatusData>
 
