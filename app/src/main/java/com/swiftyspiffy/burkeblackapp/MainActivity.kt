@@ -21,6 +21,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swiftyspiffy.burkeblackapp.data.websocket.GiveawayWebSocketManager
 import com.swiftyspiffy.burkeblackapp.push.PushNotificationManager
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitCancellation
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,6 +53,11 @@ import com.swiftyspiffy.burkeblackapp.auth.TwitchAuthManager
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import com.swiftyspiffy.burkeblackapp.navigation.Screen
 import com.swiftyspiffy.burkeblackapp.navigation.bottomNavItems
+import com.swiftyspiffy.burkeblackapp.data.captains.CaptainsRepository
+import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsViewModel
+import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.CaptainsSettingsScreen
+import com.swiftyspiffy.burkeblackapp.ui.screens.EventPopupsOverlay
 import com.swiftyspiffy.burkeblackapp.ui.screens.AboutScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.AdvancedScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.AccountScreen
@@ -62,7 +69,6 @@ import com.swiftyspiffy.burkeblackapp.ui.screens.DispatchScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.DonationsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.EmotesGalleryScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.FeedbackScreen
-import com.swiftyspiffy.burkeblackapp.ui.screens.GiveawayPopupOverlay
 import com.swiftyspiffy.burkeblackapp.ui.screens.GiveawaySettingsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.NotificationSettingsScreen
 import com.swiftyspiffy.burkeblackapp.ui.screens.PushPermissionPrompt
@@ -142,6 +148,30 @@ private fun MainApp(
     val authContext = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
     val uri by authUri
+    val captainsViewModel: CaptainsViewModel = viewModel()
+    val captains = captainsViewModel.repository
+    var returnToCaptains by rememberSaveable { mutableStateOf(false) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val signInToCaptains: () -> Unit = {
+        returnToCaptains = true
+        coroutineScope.launch {
+            TwitchAuthManager.launchAuth(
+                authContext,
+                forceVerify = captains.state.value.authRequired || accountViewModel.sessionManager.getForceVerify()
+            )
+        }
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    LaunchedEffect(captains, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            captains.start()
+            try {
+                awaitCancellation()
+            } finally {
+                captains.stop()
+            }
+        }
+    }
 
     // Handle auth callback
     LaunchedEffect(uri) {
@@ -150,10 +180,12 @@ private fun MainApp(
             val callbackData = TwitchAuthManager.parseCallbackUri(authContext, callbackUri)
             if (callbackData != null) {
                 accountViewModel.handleAuthCallback(callbackData)
-                navController.navigate(Screen.Account.route) {
+                navController.navigate(if (returnToCaptains) Screen.Captains.route else Screen.Account.route) {
                     popUpTo(Screen.Home.route)
+                    launchSingleTop = true
                 }
             }
+            returnToCaptains = false
             authUri.value = null
         }
     }
@@ -178,7 +210,6 @@ private fun MainApp(
     val isLoggedIn by accountViewModel.isLoggedIn.collectAsState()
     val token by accountViewModel.sessionManager.token.collectAsState(initial = null)
     val context = androidx.compose.ui.platform.LocalContext.current
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     LifecycleResumeEffect(isLoggedIn, token) {
         if (isLoggedIn) {
             val wsManager = GiveawayWebSocketManager.instance
@@ -202,12 +233,18 @@ private fun MainApp(
             AppNavHost(
                 navController = navController,
                 accountViewModel = accountViewModel,
+                captains = captains,
+                onCaptainsSignIn = signInToCaptains,
                 pendingTidingsArticleId = pendingTidingsArticleId,
                 onTidingsArticleConsumed = { pendingTidingsArticleId = null }
             )
 
-            // Giveaway popup overlay (floats on top)
-            GiveawayPopupOverlay(isAuthenticated = isLoggedIn)
+            EventPopupsOverlay(
+                captains,
+                isLoggedIn,
+                onOpenCaptains = { navController.navigate(Screen.Captains.route) { launchSingleTop = true } },
+                onSignIn = signInToCaptains
+            )
 
             // Push permission prompt
             PushPermissionPrompt(isLoggedIn = isLoggedIn, token = token)
@@ -270,6 +307,8 @@ private fun BottomNavBar(navController: NavHostController) {
 private fun AppNavHost(
     navController: NavHostController,
     accountViewModel: AccountViewModel,
+    captains: CaptainsRepository,
+    onCaptainsSignIn: () -> Unit,
     pendingTidingsArticleId: Int? = null,
     onTidingsArticleConsumed: () -> Unit = {}
 ) {
@@ -322,6 +361,7 @@ private fun AppNavHost(
         composable(Screen.Crew.route) {
             CrewScreen(
                 username = username,
+                onNavigateToCaptains = { navController.navigate(Screen.Captains.route) },
                 onNavigateToClipVoting = { navController.navigate(Screen.ClipVoting.route) },
                 onNavigateToCommunityServers = { navController.navigate(Screen.CommunityServers.route) },
                 onNavigateToEmotes = { navController.navigate(Screen.EmotesGallery.route) },
@@ -329,6 +369,13 @@ private fun AppNavHost(
                 onNavigateToFaq = { navController.navigate(Screen.Faq.route) },
                 onNavigateToLateShift = { navController.navigate(Screen.LateShift.route) }
             )
+        }
+
+        composable(Screen.Captains.route) {
+            CaptainsScreen(captains, onBack = { navController.popBackStack() }, onSignIn = onCaptainsSignIn)
+        }
+        composable(Screen.CaptainsSettings.route) {
+            CaptainsSettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.ClipVoting.route) {
@@ -484,6 +531,7 @@ private fun AppNavHost(
                 onBack = { navController.popBackStack() },
                 onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings.route) },
                 onNavigateToGiveawaySettings = { navController.navigate(Screen.GiveawaySettings.route) },
+                onNavigateToCaptainsSettings = { navController.navigate(Screen.CaptainsSettings.route) },
                 onNavigateToAppearance = { navController.navigate(Screen.Appearance.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) }
             )

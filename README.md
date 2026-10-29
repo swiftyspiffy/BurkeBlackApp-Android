@@ -53,6 +53,7 @@ Whether you're a long-time crew member or a new viewer, the app gives you everyt
 - **Soundbytes** - browse, preview, and send soundbytes to the stream. Filter by genre, search by name, and track your credits and send history.
 - **Captain's Quarters** - your personal dashboard with doubloons, donations, bits cheered, subscription details, giveaway history, and achievement badges.
 - **Tidings** - stay up to date with community news and announcements straight from the Captain and his officers.
+- **Captains** - choose who leads the crew with voting tokens, character profiles, and election/all-time rankings. New elections appear once as a minimizable popup; browse publicly and sign in with Twitch to vote.
 - **The Crew** - vote on monthly Twitch clips, browse community game servers, explore emotes and badges, and check The Late Shift team status.
 - **Ports** - latest YouTube videos, Shorts, TikToks, and X posts all in one feed.
 - **Mod Panel** - moderators get a full toolkit: quick actions, viewer lookup, chat commands, timed messages, giveaway and soundbyte management, and more.
@@ -90,13 +91,17 @@ cd BurkeBlackAppAndroid
 
 > **Note:** The app communicates with `api.burkeblack.tv` for backend data. Public endpoints (stream status, home data) work without authentication. Features like giveaways, soundbytes, and account stats require a Twitch login.
 
+Captains uses the existing bare-JSON API at `overlays.burkeblack.tv/captain/api/v1/` and its public/authenticated WebSockets. It shares the mobile Twitch session and voting-token balance with the extension. Pending votes are saved per Twitch user before submission; **Check vote** reuses the original request ID after an uncertain response.
+
+Captains unit and UI tests use a fixture token ledger and never spend production tokens. Run `./gradlew connectedDebugAndroidTest` for the screen and popup journey; add `-Pandroid.testInstrumentationRunnerArguments.captainsLiveRead=true` to also check the live public API and portrait loader.
+
 ### Architecture
 
 - **Kotlin** - 100% Kotlin with coroutines and StateFlow
 - **Jetpack Compose** - fully native UI with Material3
 - **MVVM** - ViewModels manage state with StateFlow
 - **Retrofit** - REST client with Kotlinx Serialization
-- **WebSocket** - OkHttp WebSocket for real-time giveaway events with auto-reconnect
+- **WebSocket** - OkHttp WebSockets for giveaway and Captains events with auto-reconnect
 - **Coil** - image loading
 - **DataStore** - session persistence
 - **Authentication** - Twitch OAuth via Chrome Custom Tabs with backend token exchange

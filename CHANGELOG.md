@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.9.0
+
+- Added Captains voting, token balances, character profiles, and election/all-time rankings
+- Added public Captains browsing under Crew, with Twitch sign-in for voting
+- Added election popups with persistent minimization and a separate alert preference
+- Coordinated giveaway and Captains popups so the newest alert takes focus
+- Added safe recovery of unconfirmed votes without spending tokens twice
+
 ## Version 1.8.0
 
 - Redesigned Helm, Crew, Tidings, Ports, and Rigging to match the iOS app

@@ -190,6 +190,8 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 val dashResponse = ApiClient.api.fetchDashboard("Bearer $token")
                 if (sessionManager.getToken() != token) return@launch
                 if (dashResponse.success && dashResponse.data != null) {
+                    sessionManager.updateUserId(dashResponse.data.userId, token)
+                    if (sessionManager.getToken() != token) return@launch
                     updateDashboard(dashResponse.data)
                 }
 

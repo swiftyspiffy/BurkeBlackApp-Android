@@ -18,8 +18,9 @@ android {
         applicationId = "com.swiftyspiffy.burkeblackapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.8.0"
+        versionCode = 20
+        versionName = "1.9.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Explicit overrides support compatibility builds; releases use Go.
         buildConfigField("boolean", "GO_API_AUTH", providers.gradleProperty("goApiAuth").orElse("true").get().toBooleanStrict().toString())
 
@@ -54,6 +55,7 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -87,5 +89,10 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     debugImplementation(libs.androidx.ui.tooling)
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -27,6 +28,7 @@ fun RiggingScreen(
     onBack: () -> Unit = {},
     onNavigateToNotificationSettings: () -> Unit,
     onNavigateToGiveawaySettings: () -> Unit,
+    onNavigateToCaptainsSettings: () -> Unit = {},
     onNavigateToAppearance: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
 ) {
@@ -65,6 +67,9 @@ fun RiggingScreen(
                     tint = PirateTheme.accentColor,
                     modifier = Modifier.size(26.dp),
                 )
+            }
+            PirateActionCard("Captains", "Election alerts & voting preferences", onNavigateToCaptainsSettings) {
+                Icon(Icons.Default.HowToVote, null, tint = PirateTheme.accentColor, modifier = Modifier.size(26.dp))
             }
             PirateActionCard(
                 "Appearance",

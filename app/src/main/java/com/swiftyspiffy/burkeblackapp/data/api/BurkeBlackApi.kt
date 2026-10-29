@@ -53,6 +53,11 @@ interface BurkeBlackApi {
         @Header("Authorization") auth: String
     ): ApiResponse<GifSettingsData>
 
+    // Captains validates the existing session on another host; renew it explicitly here.
+    @Headers("X-Burke-Go-API: 1")
+    @POST("auth/renew")
+    suspend fun renewCaptainSession(@Header("Authorization") auth: String): ApiResponse<JsonObject>
+
     // Auth
     @POST("auth/reviewer")
     suspend fun reviewerLogin(@Body body: JsonObject): ApiResponse<ReviewerResponse>

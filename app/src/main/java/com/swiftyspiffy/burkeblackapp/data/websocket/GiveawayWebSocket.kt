@@ -1,5 +1,7 @@
 package com.swiftyspiffy.burkeblackapp.data.websocket
 
+import com.swiftyspiffy.burkeblackapp.data.EventPopup
+import com.swiftyspiffy.burkeblackapp.data.EventPopupCoordinator
 import com.swiftyspiffy.burkeblackapp.data.api.ApiClient
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
@@ -121,6 +123,7 @@ class GiveawayWebSocketManager private constructor() {
             username = null
         }
         _activeGiveaway.value = null
+        EventPopupCoordinator.instance.available(EventPopup.GIVEAWAY, false)
         _isDismissed.value = false
         _claimError.value = null
         _messageLog.value = emptyList()
@@ -215,6 +218,7 @@ class GiveawayWebSocketManager private constructor() {
             // But NOT raffleclaim — once claimed, if dismissed it should stay dismissed
             if (event in listOf("newraffle", "rafflewinner")) {
                 _isDismissed.value = false
+                EventPopupCoordinator.instance.present(EventPopup.GIVEAWAY)
             }
 
             when (event) {
@@ -268,6 +272,7 @@ class GiveawayWebSocketManager private constructor() {
                 "raffleerror" -> {
                     AppLogger.log("Giveaway: raffle error")
                     _activeGiveaway.value = null
+                    EventPopupCoordinator.instance.available(EventPopup.GIVEAWAY, false)
                 }
             }
         } catch (e: Exception) {
@@ -310,6 +315,7 @@ class GiveawayWebSocketManager private constructor() {
                     "claim" -> claimDuration
                     else -> timeRemaining
                 }
+                val previous = _activeGiveaway.value
                 _activeGiveaway.value = ActiveGiveaway(
                     id = id,
                     name = name,
@@ -320,6 +326,12 @@ class GiveawayWebSocketManager private constructor() {
                     timeRemaining = if (countdown != null && countdown > 0) countdown else null,
                     countdownStartMillis = if (countdown != null && countdown > 0) System.currentTimeMillis() else null
                 )
+                EventPopupCoordinator.instance.available(EventPopup.GIVEAWAY, true)
+                if (_popupsEnabled && (previous == null || (previous.id != null && previous.id != id) ||
+                    (phase == GiveawayPhase.WINNER && previous.phase != phase))) {
+                    _isDismissed.value = false
+                    EventPopupCoordinator.instance.present(EventPopup.GIVEAWAY)
+                }
                 AppLogger.log("Active giveaway found: $name ($state), winner=$winner")
             }
         } catch (e: Exception) { AppLogger.log("Error: ${e.message}") }
@@ -404,10 +416,12 @@ class GiveawayWebSocketManager private constructor() {
 
     fun dismissGiveaway() {
         _isDismissed.value = true
+        EventPopupCoordinator.instance.minimize(EventPopup.GIVEAWAY)
     }
 
     fun showGiveaway() {
         _isDismissed.value = false
+        if (_activeGiveaway.value != null) EventPopupCoordinator.instance.present(EventPopup.GIVEAWAY)
     }
 
     fun hasActiveGiveaway(): Boolean {

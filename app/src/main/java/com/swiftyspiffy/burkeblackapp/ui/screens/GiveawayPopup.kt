@@ -45,6 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.swiftyspiffy.burkeblackapp.data.EventPopup
+import com.swiftyspiffy.burkeblackapp.data.EventPopupCoordinator
 import com.swiftyspiffy.burkeblackapp.data.websocket.GiveawayPhase
 import com.swiftyspiffy.burkeblackapp.util.AppLogger
 import com.swiftyspiffy.burkeblackapp.data.websocket.GiveawayWebSocketManager
@@ -57,14 +59,14 @@ fun GiveawayPopupOverlay(isAuthenticated: Boolean = false) {
     LaunchedEffect(Unit) { AppLogger.log("GiveawayPopup: appeared") }
     val wsManager = GiveawayWebSocketManager.instance
     val giveaway by wsManager.activeGiveaway.collectAsState()
-    val isDismissed by wsManager.isDismissed.collectAsState()
+    val presentation by EventPopupCoordinator.instance.state.collectAsState()
     val claimError by wsManager.claimError.collectAsState()
     val scope = rememberCoroutineScope()
     var showAuthError by remember { mutableStateOf(false) }
 
     // Main popup - visible when there's an active giveaway and not dismissed
     AnimatedVisibility(
-        visible = giveaway != null && !isDismissed,
+        visible = giveaway != null && presentation.expanded == EventPopup.GIVEAWAY,
         enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
         exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
     ) {
@@ -282,36 +284,4 @@ fun GiveawayPopupOverlay(isAuthenticated: Boolean = false) {
         }
     }
 
-    // Mini restore button when dismissed but giveaway is still active (not after claimed)
-    if (giveaway != null && isDismissed && giveaway?.phase != GiveawayPhase.CLAIMED) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 16.dp, top = 16.dp),
-            contentAlignment = Alignment.TopEnd
-        ) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1A1A2E).copy(alpha = 0.9f))
-                    .clickable { wsManager.showGiveaway() }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.CardGiftcard,
-                    contentDescription = "Show giveaway",
-                    tint = PirateTheme.accentColor,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Giveaway Active",
-                    fontFamily = PirateTheme.fontFamily,
-                    color = PirateTheme.accentColor,
-                    fontSize = 12.sp
-                )
-            }
-        }
-    }
 }

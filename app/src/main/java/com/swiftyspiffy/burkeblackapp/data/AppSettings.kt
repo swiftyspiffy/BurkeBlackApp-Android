@@ -15,10 +15,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.TimeZone
+import com.swiftyspiffy.burkeblackapp.data.captains.CaptainsStore
+import com.swiftyspiffy.burkeblackapp.data.models.CaptainVoteRequest
+import kotlinx.serialization.json.Json
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
-class AppSettings(private val context: Context) {
+class AppSettings(private val context: Context) : CaptainsStore {
 
     // Notification toggles
     private val burkeStreamEnabled = booleanPreferencesKey("settings.notif.burkeStream.enabled")
@@ -45,6 +48,29 @@ class AppSettings(private val context: Context) {
     private val youtubeShortsEnabled = booleanPreferencesKey("settings.notif.youtubeShorts")
     private val tiktokVideosEnabled = booleanPreferencesKey("settings.notif.tiktokVideos")
     private val twitterPostsEnabled = booleanPreferencesKey("settings.notif.twitterPosts")
+
+    private val captainPopups = booleanPreferencesKey("settings.captains.popupsEnabled")
+    private val captainElection = stringPreferencesKey("settings.captains.lastElection")
+    val captainPopupsEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { it[captainPopups] ?: true }
+
+    suspend fun setCaptainPopupsEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[captainPopups] = enabled }
+    }
+
+    override suspend fun lastCaptainElection(): String? = context.settingsDataStore.data.first()[captainElection]
+    override suspend fun markCaptainElection(key: String) {
+        context.settingsDataStore.edit { it[captainElection] = key }
+    }
+    override suspend fun pendingCaptainVote(userId: String): CaptainVoteRequest? {
+        val raw = context.settingsDataStore.data.first()[stringPreferencesKey("captains.pending.$userId")] ?: return null
+        return Json.decodeFromString<CaptainVoteRequest>(raw).also { it.validate() }
+    }
+    override suspend fun saveCaptainVote(userId: String, request: CaptainVoteRequest?) {
+        val key = stringPreferencesKey("captains.pending.$userId")
+        context.settingsDataStore.edit { prefs ->
+            if (request == null) prefs.remove(key) else prefs[key] = Json.encodeToString(CaptainVoteRequest.serializer(), request)
+        }
+    }
 
     // Other settings
     private val giveawayPopupsEnabled = booleanPreferencesKey("settings.giveaways.popupsEnabled")

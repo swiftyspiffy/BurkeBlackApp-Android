@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import com.swiftyspiffy.burkeblackapp.util.AppLogger
 @Composable
 fun CrewScreen(
     username: String = "",
+    onNavigateToCaptains: () -> Unit = {},
     onNavigateToClipVoting: () -> Unit = {},
     onNavigateToCommunityServers: () -> Unit = {},
     onNavigateToEmotes: () -> Unit = {},
@@ -54,6 +56,11 @@ fun CrewScreen(
                     Icons.Default.Groups,
                     "Gather, explore, and sail with the community.",
                 )
+            }
+            item {
+                PirateActionCard("Captains", "Choose who leads the crew", onNavigateToCaptains) {
+                    Icon(Icons.Default.HowToVote, null, tint = PirateTheme.accentColor, modifier = Modifier.size(28.dp))
+                }
             }
             item {
                 PirateActionCard(

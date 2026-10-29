@@ -28,6 +28,17 @@ class SessionManager(private val context: Context) {
         prefs[TOKEN_KEY] != null
     }
 
+    val identity: Flow<SessionIdentity?> = context.dataStore.data.map { prefs ->
+        prefs[TOKEN_KEY]?.let { SessionIdentity(prefs[USER_ID_KEY] ?: "", it) }
+    }
+
+    suspend fun updateUserId(userId: String, expectedToken: String) {
+        if (userId.isEmpty() || userId.any { it !in '0'..'9' }) return
+        context.dataStore.edit { prefs ->
+            if (prefs[TOKEN_KEY] == expectedToken) prefs[USER_ID_KEY] = userId
+        }
+    }
+
     val token: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[TOKEN_KEY]
     }

@@ -33,6 +33,8 @@ sealed class Screen(val route: String) {
     data object NewTiding : Screen("new_tiding")
     data object EditTiding : Screen("edit_tiding")
     data object DeletedTidings : Screen("deleted_tidings")
+    data object Captains : Screen("captains")
+    data object CaptainsSettings : Screen("captains_settings")
     data object CaptainsDispatch : Screen("captains_dispatch")
     data object CrewDispatch : Screen("crew_dispatch")
     data object EmotesGallery : Screen("emotes_gallery")
